@@ -18487,5 +18487,107 @@ window._kmMount = function(){
     diag('… ' + where);
   };
 })();
+
 </script>
+
+<script>
+/* ══ 键盘诊断面板 ═══════════════════════════════════════════════════════
+   键盘一弹就自动显示一行实测数字。用来看清到底是哪一层坏了。
+
+   五版都没修好，就是因为每次只有「抬了 / 没抬 / 抬一半」这种粗描述。
+   这个面板直接把每一层的真实数值摆出来，一眼能看出断在哪。
+
+   关掉方式：点一下它。想再看：在输入框里点一下（键盘弹出就会重新显示）。
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var el = null, timer = 0;
+
+  function px(n){ return (n === undefined || n === null) ? '?' : Math.round(n); }
+  function cs(name){
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name);
+    return (v || '').trim() || '(空)';
+  }
+
+  function collect(){
+    var root = document.documentElement;
+    var app = document.querySelector('.app');
+    var comp = document.querySelector('.composer');
+    var tabs = document.querySelector('.tabbar');
+    var vv = window.visualViewport;
+
+    var ab = app ? app.getBoundingClientRect() : null;
+    var cb = comp ? comp.getBoundingClientRect() : null;
+    var tb = tabs ? tabs.getBoundingClientRect() : null;
+
+    var lines = [];
+    lines.push('kb=' + cs('--kb') + '  vvh=' + cs('--vvh')
+             + '  kbopen=' + (root.classList.contains('kb-open') ? 'Y' : 'N')
+             + '  shell=' + (window.__vvhFromShell ? 'Y' : 'N'));
+    lines.push('innerH=' + px(window.innerHeight)
+             + '  vvH=' + px(vv && vv.height)
+             + '  vvOff=' + px(vv && vv.offsetTop)
+             + '  dpr=' + (window.devicePixelRatio || 1));
+    if (ab) lines.push('app: top=' + px(ab.top) + ' bottom=' + px(ab.bottom)
+                     + ' h=' + px(ab.height));
+    if (cb) lines.push('composer: bottom=' + px(cb.bottom) + ' h=' + px(cb.height));
+    if (tb) lines.push('tabbar: bottom=' + px(tb.bottom) + ' h=' + px(tb.height));
+    lines.push('safe: t=' + cs('--safe-area-inset-top')
+             + ' b=' + cs('--safe-area-inset-bottom'));
+    /* ★ Java 报的原始值（物理像素）。这是最关键的一行：
+         如果 ime 有值而上面 kb=0px，说明是推送/接收链路的问题；
+         如果 ime 也是 0，说明 ROM 根本不报，页面侧怎么改都没用。 */
+    var r = window.__lastRaw;
+    lines.push(r
+      ? ('java: ime=' + r.ime + 'px sys=' + r.sys + 'px nav=' + r.nav
+         + 'px d=' + (Math.round(r.d * 100) / 100) + ' api=' + r.api)
+      : 'java: (还没收到原始值)');
+    return lines.join('\n');
+  }
+
+  function show(){
+    if (!el){
+      el = document.createElement('div');
+      el.id = 'kbdiag';
+      el.style.cssText = [
+        'position:fixed','left:6px','right:6px','top:6px','z-index:100000',
+        'background:rgba(0,0,0,.9)','color:#7CFC9E',
+        'font:11px/1.45 monospace','padding:7px 9px','border-radius:8px',
+        'white-space:pre-wrap','word-break:break-all','pointer-events:auto'
+      ].join(';');
+      el.addEventListener('click', function(){ el.style.display = 'none'; });
+      document.body.appendChild(el);
+    }
+    el.style.display = 'block';
+    el.textContent = collect();
+  }
+  window.__kbDiag = show;
+  /* Java 推过来的原始 insets（物理像素）。只存，不参与任何计算。 */
+  window.__kbRaw = function(o){
+    window.__lastRaw = o;
+    if (el && el.style.display !== 'none') show();
+  };
+
+  /* 键盘一开就刷，键盘开着时持续跟几帧（布局可能分几步稳定下来） */
+  function tick(){
+    show();
+    if (document.documentElement.classList.contains('kb-open')){
+      if (--timer > 0) setTimeout(tick, 120);
+    }
+  }
+  window.addEventListener('focusin', function(e){
+    var t = e.target;
+    if (!t || !t.matches || !t.matches('textarea, input')) return;
+    timer = 12;                      /* 约 1.4 秒，覆盖键盘动画 */
+    setTimeout(tick, 80);
+  });
+  /* 任何 inset 变化也刷一次（含键盘收起） */
+  var lastSig = '';
+  setInterval(function(){
+    var sig = cs('--kb') + '|' + (document.documentElement.classList.contains('kb-open') ? 1 : 0);
+    if (sig !== lastSig){ lastSig = sig; if (el) show(); }
+  }, 400);
+})();
+</script>
+
 

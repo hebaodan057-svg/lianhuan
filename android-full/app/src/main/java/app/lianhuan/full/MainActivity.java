@@ -316,6 +316,10 @@ public class MainActivity extends Activity {
                     imePx = Math.max(0, insets.getSystemWindowInsetBottom());
                 }
                 int css = Math.max(0, Math.round(imePx / dp));
+                /* ★ 把 Java 拿到的**原始**数字也推给页面，放进诊断面板。
+                   如果 ime() 本身就报 0，那 --kb 必然是 0，页面侧怎么调都没用 ——
+                   必须能区分这两种情况，不然永远在错的地方改。 */
+                pushRawInsets(imePx, dp, insets);
                 if (css != lastKbCss) {
                     lastKbCss = css;
                     pushKeyboardHeight(css);
@@ -455,6 +459,34 @@ public class MainActivity extends Activity {
                         + "r.style.setProperty('--safe-area-inset-right','" + cr + "px');"
                         + "})()", null);
                 } catch (Exception ignored) { }
+            }
+        });
+    }
+
+    /** 把原始 insets 推给页面（物理像素），给诊断面板看。
+     *
+     *  想区分两件完全不同的事：
+     *    ① ime() 报的是对的，但我们推/页面接的过程出了问题 → 改我们
+     *    ② ime() 本身就是 0（ROM 不报）→ 只能走别的手段
+     *  光看 --kb 分不出来，因为两种情况最终都是 0。
+     */
+    private void pushRawInsets(final int imePx, final float dp,
+                               android.view.WindowInsets insets) {
+        if (web == null || insets == null) return;
+        int sys = 0, vis = 0;
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            sys = insets.getInsets(android.view.WindowInsets.Type.systemBars()).bottom;
+            vis = insets.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom;
+        } else {
+            sys = insets.getSystemWindowInsetBottom();
+            vis = insets.getStableInsetBottom();
+        }
+        final String js = "window.__kbRaw && window.__kbRaw({ime:" + imePx
+                + ",sys:" + sys + ",nav:" + vis
+                + ",d:" + dp + ",api:" + android.os.Build.VERSION.SDK_INT + "})";
+        web.post(new Runnable() {
+            public void run() {
+                try { web.evaluateJavascript(js, null); } catch (Exception ignored) { }
             }
         });
     }
