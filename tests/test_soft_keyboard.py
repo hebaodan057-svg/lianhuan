@@ -93,10 +93,16 @@ class TestSoftKeyboard(unittest.TestCase):
 
     @unittest.skipUnless((ROOT / "app" / "index.html").exists(),
                          "create.py 的产物不带 app/，这条只在源码仓库里跑")
-    def test_both_copies_stay_identical(self):
-        """app/index.html 是 core/web/index.html 的副本，CI 里 diff 钉着，这儿也钉一道。"""
-        other = (ROOT / "app" / "index.html").read_text(encoding="utf-8")
-        self.assertEqual(self.h, other, "两份前端漂开了")
+    def test_both_copies_differ_only_by_viewport_fit(self):
+        """两份前端只允许差一处：安卓那份没有 viewport-fit=cover。
+
+        ★ 旧约定是「逐字节一致」。但安卓必须去掉 cover ——
+          否则 Chromium 进入 passthrough 缩放模式，setPadding 和 insets
+          全部失效，键盘处理无从下手（Capacitor #8622，同机型同 WebView）。
+          iOS/PWA 那份需要 cover 处理刘海，且 WKWebView 没有这个 bug。
+        """
+        from _copies import assert_copies_agree
+        assert_copies_agree(self)
 
 
 if __name__ == "__main__":

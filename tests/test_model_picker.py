@@ -194,14 +194,18 @@ class TestTheSheetFindsModelsByItself(unittest.TestCase):
 
     @unittest.skipUnless(pathlib.Path("app/index.html").exists(),
                          "create.py 的产物不带 app/，这条只在源码仓库里跑")
-    def test_the_two_copies_stay_identical(self):
-        """app/index.html 是 core/web/index.html 的副本，改了一边必须复制过去。
+    def test_the_two_copies_differ_only_by_viewport_fit(self):
+        """app/index.html 与 core/web/index.html 只允许差 viewport-fit=cover。
+
+        ★ 安卓必须去掉 cover（Capacitor #8622），否则键盘处理全部失效。
+          规则收在 tests/_copies.py，别在每处各写一遍 replace。
 
         ★ 这一条**第三次**在同一个坑上栽：写了读仓库文件的测试，本机绿就以为过了，
           `create.py` 的干净副本里那个文件根本不存在，当场红。
-          规矩：加了读仓库文件的测试，一定要在干净副本上再跑一遍。"""
-        with open("app/index.html", encoding="utf-8") as f:
-            self.assertEqual(f.read(), self.src, "两份不一样了 —— cp 一下")
+          规矩：加了读仓库文件的测试，一定要在干净副本上再跑一遍。
+        """
+        from _copies import assert_copies_agree
+        assert_copies_agree(self)
 
     def test_it_goes_through_the_endpoint_table(self):
         """URL 只从 EP 表拿，不在逻辑里写字面地址（这仓库的老规矩）。"""

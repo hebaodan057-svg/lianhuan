@@ -14,9 +14,14 @@ class TestMoveUI(unittest.TestCase):
         cls.app = app.read_text(encoding="utf-8") if app.exists() else None
 
     def test_both_pages_are_identical(self):
+        """两份前端只允许差 viewport-fit=cover（安卓那份没有）。
+
+        ★ 规则在 tests/_copies.py，改规则只改那一处。
+        """
         if self.app is None:
             self.skipTest("发行产物只带运行页面，不带开发镜像")
-        self.assertEqual(self.app, self.web)
+        from _copies import assert_copies_agree
+        assert_copies_agree(self)
 
     def test_settings_has_one_real_move_page(self):
         self.assertEqual(self.web.count('data-open="movepage"'), 1)

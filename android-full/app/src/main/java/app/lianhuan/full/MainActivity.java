@@ -323,6 +323,7 @@ public class MainActivity extends Activity {
                 /* ★ 这里**不**推 --vvh。inset 变化多半是键盘引起的，
                    而 --vvh 代表「应用该占多高」，不该因为键盘而变 ——
                    否则 .app 又变矮，底栏又跟着抬回去了。 */
+                pushSafeArea(insets);   /* 安全区随时同步（横竖屏/刘海变化） */
                 return v.onApplyWindowInsets(insets);
             }
         });
@@ -382,6 +383,11 @@ public class MainActivity extends Activity {
                     }
                     web.evaluateJavascript(
                         "window.__kbSet && window.__kbSet(" + kb + ")", null);
+                    /* 安全区也要重推 —— 页面加载完之前那次注入同样会丢 */
+                    lastSafe = "";
+                    android.view.WindowInsets wi =
+                            web.getRootWindowInsets();
+                    if (wi != null) pushSafeArea(wi);
                 } catch (Exception ignored) { }
             }
         });
@@ -401,6 +407,54 @@ public class MainActivity extends Activity {
                 if (w <= 0 || w == lastWidthPx) return;
                 lastWidthPx = w;
                 pushViewHeight();
+            }
+        });
+    }
+
+    /** 把安全区推给页面，写成 --safe-area-inset-*（CSS px）。
+     *
+     *  ★ 为什么必须由壳层给：安卓那份 index.html 去掉了 viewport-fit=cover
+     *    （Capacitor #8622 —— 不去掉的话键盘缩放不可控）。
+     *    但去掉 cover 之后 env(safe-area-inset-*) 在安卓上全是 0，
+     *    顶栏会顶到状态栏底下、底栏会贴到导航栏后面。
+     *
+     *    前端 CSS 已经写成 var(--safe-area-inset-X, env(safe-area-inset-X))：
+     *    安卓读这里注入的自定义属性，iOS/PWA 那份没有注入、自然退回 env()。
+     */
+    private String lastSafe = "";
+
+    private void pushSafeArea(android.view.WindowInsets insets) {
+        if (web == null || insets == null) return;
+        final float d = getResources().getDisplayMetrics().density;
+        final float dp = (d == 0f ? 1f : d);
+        int t, b, l, r;
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            android.graphics.Insets sb = insets.getInsets(
+                    android.view.WindowInsets.Type.systemBars()
+                    | android.view.WindowInsets.Type.displayCutout());
+            t = sb.top; b = sb.bottom; l = sb.left; r = sb.right;
+        } else {
+            t = insets.getSystemWindowInsetTop();
+            b = insets.getSystemWindowInsetBottom();
+            l = insets.getSystemWindowInsetLeft();
+            r = insets.getSystemWindowInsetRight();
+        }
+        final int ct = Math.round(t / dp), cb = Math.round(b / dp);
+        final int cl = Math.round(l / dp), cr = Math.round(r / dp);
+        final String key = ct + "," + cb + "," + cl + "," + cr;
+        if (key.equals(lastSafe)) return;
+        lastSafe = key;
+        web.post(new Runnable() {
+            public void run() {
+                try {
+                    web.evaluateJavascript(
+                        "(function(){var r=document.documentElement;"
+                        + "r.style.setProperty('--safe-area-inset-top','" + ct + "px');"
+                        + "r.style.setProperty('--safe-area-inset-bottom','" + cb + "px');"
+                        + "r.style.setProperty('--safe-area-inset-left','" + cl + "px');"
+                        + "r.style.setProperty('--safe-area-inset-right','" + cr + "px');"
+                        + "})()", null);
+                } catch (Exception ignored) { }
             }
         });
     }

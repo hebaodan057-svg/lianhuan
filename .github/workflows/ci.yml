@@ -23,7 +23,20 @@ jobs:
         run: |
           set -euo pipefail
           python tools/checkhtml.py
-          diff -q app/index.html core/web/index.html
+          # ★ 两份不再要求逐字节相同：安卓那份必须去掉 viewport-fit=cover
+          #   （否则 Chromium 走 passthrough 缩放，键盘处理全部失效 ——
+          #    Capacitor #8622，同机型同 WebView 版本）。
+          #   除这一处之外，其余必须完全一致。
+          python -c "
+import sys
+web = open('core/web/index.html', encoding='utf-8').read()
+android = open('app/index.html', encoding='utf-8').read()
+if 'viewport-fit=cover' in android:
+    sys.exit('✗ 安卓那份必须去掉 viewport-fit=cover')
+if android != web.replace('viewport-fit=cover, ', '', 1):
+    sys.exit('✗ 两份前端漂开了（除 viewport-fit=cover 之外还有别的差异）')
+print('✓ 两份只差 viewport-fit=cover')
+" 
           npm test
           npm run build
           npm run check:privacy
