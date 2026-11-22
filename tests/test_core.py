@@ -1094,13 +1094,19 @@ class TestBlocksDoNotDrift(unittest.TestCase):
         self.assertIn(body, app, "书脊 CSS 两份漂了 —— 改了一处没改另一处")
 
     def test_water_sim_lives_in_exactly_one_place(self):
-        """水面那份 js 是真共用（应用直接从 /blocks/water/ 加载），不许再出现第二份。"""
+        """水面那份 js 只许有一份，且页面不再从 core/web 加载它。
+
+        ★ 这一条原来还钉着「页面里必须出现 /blocks/water/maple-water.js」——
+          那个引用是枫叶开屏的水面待机。开屏整块删掉之后页面不再加载它，
+          剩下该钉的只有「别在多处各存一份」。
+        """
         need("blocks/water")
         self.assertTrue((self.ROOT / "blocks/water/maple-water.js").exists())
         self.assertFalse((self.ROOT / "core/web/maple-water.js").exists(),
                          "core/web 下又出现了一份 maple-water.js")
         app = (self.ROOT / APP()).read_text(encoding="utf-8")
-        self.assertIn("/blocks/water/maple-water.js", app)
+        self.assertNotIn("core/web/maple-water.js", app,
+                         "页面不该从 core/web 加载水面脚本（它属于积木层）")
 
     def test_water_resize_waits_until_setup_is_complete(self):
         """ResizeObserver 会在窄屏首开时抢跑；叶片池没建好就重绘会把开屏炸掉。"""
@@ -1186,11 +1192,17 @@ class TestBlocksDoNotDrift(unittest.TestCase):
                              "%s 里内联了图片素材 —— 素材要走 /pet/，不许打进 HTML" % rel)
 
     def test_the_pet_folder_ships_empty(self):
-        """机制在、素材不在。这个目录里除了那份说明，什么都不该有。"""
+        """桌宠整块删掉了 —— 不是「素材不在」，是「功能不在」。
+
+        ★ 这一条原来钉的是「core/web/pet/ 里只许有那份说明」。后来连功能带目录一起删了，
+          那就该反过来钉：那个目录不许再回来，前端里也不许再出现桌宠的痕迹。
+          （照旧留着这个名字，方便跟上游客对得上号。）
+        """
         d = self.ROOT / "core/web/pet"
-        self.assertTrue((d / "README.md").exists(), "指路的那份说明不能少")
-        extra = sorted(x.name for x in d.iterdir() if x.name not in ("README.md",))
-        self.assertEqual([], extra, "桌宠素材不许跟着仓库出门：" + "、".join(extra))
+        self.assertFalse(d.exists(), "core/web/pet/ 又出现了 —— 桌宠已经整块删掉")
+        app = (self.ROOT / APP()).read_text(encoding="utf-8")
+        for needle in ("applyCrabWhere", 'data-sub="桌宠"', "crab"):
+            self.assertNotIn(needle, app, "前端里又出现了桌宠的痕迹：" + needle)
 
     def test_robot_block_is_frontend_only(self):
         """机器人这块是作者定的「只带前端」—— 别哪天又把某个后端塞进来。"""

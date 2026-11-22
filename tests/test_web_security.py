@@ -55,6 +55,11 @@ def _request(method="GET", path="/", *, headers=(), body=b"", client="127.0.0.1"
 
 class TestPageSupplyChainAndEscaping(unittest.TestCase):
     def test_p5_is_vendored_and_pinned(self):
+        """p5 只许是仓库里那一份（哈希钉死），页面也绝不许走 CDN。
+
+        ★ 原来还钉着「页面里必须出现 /vendor/p5-1.9.4.min.js」—— 页面是用它在跑开屏水面。
+          开屏删掉后页面不再需要 p5，所以那条改成「页面要是还用 p5，就必须用仓库这一份」。
+        """
         expected = "00a532c56e785c68d7c7bb6f9a084e2c856b71527f22c3260aff4a2f582d80c9"
         p5 = ROOT / "core" / "web" / "vendor" / "p5-1.9.4.min.js"
         self.assertEqual(expected, hashlib.sha256(p5.read_bytes()).hexdigest())
@@ -66,8 +71,10 @@ class TestPageSupplyChainAndEscaping(unittest.TestCase):
         self.assertTrue(pages)
         for page in pages:
             text = page.read_text(encoding="utf-8")
-            self.assertIn("/vendor/p5-1.9.4.min.js", text)
-            self.assertNotIn("cdnjs.cloudflare.com", text)
+            self.assertNotIn("cdnjs.cloudflare.com", text, "页面不许走 CDN 拿 p5")
+            if "p5-1.9.4.min.js" in text:
+                self.assertIn("/vendor/p5-1.9.4.min.js", text,
+                              "页面里的 p5 必须指向仓库自带的那一份")
 
     @unittest.skipUnless(shutil.which("node"), "需要 node 执行页面自己的转义函数")
     def test_quote_payload_does_not_create_an_event_attribute(self):

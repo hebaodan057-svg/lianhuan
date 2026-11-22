@@ -27,10 +27,8 @@ await mkdir(dist, { recursive: true });
 for (const f of ["index.html", "html2canvas.min.js", "mini-player.js"]) await cp(join(src, f), join(dist, f));
 await cp(join(src, "icons"), join(dist, "icons"), { recursive: true, filter: keep });
 await cp(join(here, "banner.js"), join(dist, "banner.js"));
-/* 开屏那层水是从积木层拉的（blocks/water/，MIT），index.html 里是站根绝对路径。
-   只拿这一个文件，它自包含（不再 import/fetch 别的）；README/demo 不带。 */
-await mkdir(join(dist, "blocks", "water"), { recursive: true });
-await cp(join(repo, "blocks", "water", "maple-water.js"), join(dist, "blocks", "water", "maple-water.js"));
+/* 开屏那层水（blocks/water/maple-water.js）曾经要从积木层拉一个文件过来。
+   ★ 开屏已经整块删了，页面上不再加载它，所以这里不再拷贝这份文件。 */
 
 /* ── 2. 纯文本替换（改的是副本） ── */
 let html = await readFile(join(dist, "index.html"), "utf8");
@@ -45,13 +43,15 @@ function swap(label, needle, replacement, expect) {
 }
 
 /* a. 补 doctype / html / head / body。源文件第 1 行就是 <meta charset>，没有这四样，
-      浏览器跑在怪异模式。head 区到最后一个 </style> 为止，接着是开屏那段注释＋ <div id="splash">。 */
+      浏览器跑在怪异模式。head 区到最后一个 </style> 为止，接着就是 <div class="app" id="app">。
+      ★ 这块锚点原来是「开屏」那段注释，开屏删掉之后改钉 app 这个 div —— 它必须还在
+      （源文件里没有 <head>/<body>，全靠这一刀补出来）。 */
 if (!html.startsWith('<meta charset="utf-8">')) throw new Error("源文件不再以 <meta charset> 开头，head 的位置要重新看");
 if (/<(html|head|body)[\s>]/i.test(html.replace(/<script[\s\S]*?<\/script>/gi, ""))) {
   throw new Error("源文件里已经有 <html>/<head>/<body> 了，不该再补");
 }
 html = '<!doctype html>\n<html lang="zh-CN">\n<head>\n' + html;
-swap("head→body 分界", "\n<!-- ══ 开屏 ══", "\n</head>\n<body>\n\n<!-- ══ 开屏 ══", 1);
+swap("head→body 分界", '\n<div class="app" id="app">', '\n</head>\n<body>\n\n<div class="app" id="app">', 1);
 if (!/<\/script>\s*$/.test(html)) throw new Error("源文件不再以 </script> 收尾，末尾追加的位置要重新看");
 html = html.replace(/\s*$/, "\n") + '<script src="banner.js"></script>\n</body>\n</html>\n';   // d. 横条脚本
 
@@ -86,7 +86,8 @@ swap("manifest 链接", '<link rel="manifest" href="/manifest.json">\n', "", 1);
 swap("图标路径", 'href="/icons/', 'href="icons/', 2);
 swap("出图脚本路径", "sc.src = '/html2canvas.min.js';", "sc.src = 'html2canvas.min.js';", 1);
 swap("悬浮歌条脚本路径", '<script src="/mini-player.js"></script>', '<script src="mini-player.js"></script>', 1);
-swap("开屏水面脚本路径", "load('/blocks/water/maple-water.js?v='", "load('blocks/water/maple-water.js?v='", 1);
+/* 原来还有一条「开屏水面脚本路径」的 swap（把 /blocks/water/maple-water.js 改成相对路径）。
+   ★ 开屏删了，页面上不再 load 这个脚本，那条 swap 一并去掉 —— 留着会因为「预期命中 1 处、实际 0 处」直接抛错。 */
 
 /* ── 3. 简单解析一遍，确认标签配平 ── */
 function checkShape(doc) {

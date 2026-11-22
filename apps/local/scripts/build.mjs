@@ -32,8 +32,7 @@ await rm(dist, { recursive: true, force: true });
 await mkdir(join(dist, "wheels"), { recursive: true });
 for (const f of ["index.html", "html2canvas.min.js", "mini-player.js", "manifest.json"]) await cp(join(src, f), join(dist, f));
 await cp(join(src, "icons"), join(dist, "icons"), { recursive: true, filter: keep });
-await mkdir(join(dist, "blocks", "water"), { recursive: true });
-await cp(join(repo, "blocks", "water", "maple-water.js"), join(dist, "blocks", "water", "maple-water.js"));
+/* 开屏删了，页面上不再加载 blocks/water/maple-water.js，这一份不再拷进 dist。 */
 await cp(join(here, "local-boot.js"), join(dist, "local-boot.js"));   // 里头的占位稍后按 dist 真实内容填
 
 /* ── 轮子：PyPI 的 JSON 接口找 py3-none-any，下到 .wheels/ 缓存，再拷进 dist ── */
@@ -70,7 +69,7 @@ if (/<(html|head|body)[\s>]/i.test(html.replace(/<script[\s\S]*?<\/script>/gi, "
 html = '<!doctype html>\n<html lang="zh-CN">\n<head>\n' +
   '<script id="lh-wheels" type="application/json">' + JSON.stringify(wheelNames) + '</script>\n' +
   '<script src="local-boot.js"></script>\n' + html;                       // ★ 必须排在页面所有脚本前面：它要先把 fetch 换掉
-swap("head→body 分界", "\n<!-- ══ 开屏 ══", "\n</head>\n<body>\n\n<!-- ══ 开屏 ══", 1);
+swap("head→body 分界", '\n<div class="app" id="app">', '\n</head>\n<body>\n\n<div class="app" id="app">', 1);
 if (!/<\/script>\s*$/.test(html)) throw new Error("源文件不再以 </script> 收尾");
 html = html.replace(/\s*$/, "\n") + "</body>\n</html>\n";
 swap("颜文字样式表", '<link rel="stylesheet" href="/kaomoji/vendor/styles.css">\n', "", 1);
@@ -84,7 +83,7 @@ swap("manifest 链接", 'href="/manifest.json"', 'href="manifest.json"', 1);
 swap("图标路径", 'href="/icons/', 'href="icons/', 2);
 swap("出图脚本路径", "sc.src = '/html2canvas.min.js';", "sc.src = 'html2canvas.min.js';", 1);
 swap("悬浮歌条脚本路径", '<script src="/mini-player.js"></script>', '<script src="mini-player.js"></script>', 1);
-swap("开屏水面脚本路径", "load('/blocks/water/maple-water.js?v='", "load('blocks/water/maple-water.js?v='", 1);
+/* 「开屏水面脚本路径」那条 swap 已去掉：开屏删了，页面不再 load maple-water.js。 */
 
 /* ★ CSP：把「这个源上只跑自己的脚本」写死。
    这个源下面存着模型 key 和整份家，第三方脚本一旦能在这儿执行，那道边界就没了。
