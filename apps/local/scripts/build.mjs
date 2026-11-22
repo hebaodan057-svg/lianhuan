@@ -191,7 +191,7 @@ await writeFile(join(dist, "README.txt"),
   "数据在这台设备的浏览器 IndexedDB 里。\n" +
   "★ 一个第三方 CDN 都不连：Pyodide 和 p5 都在这个目录里，页面上还钉了 CSP（script-src 只认 'self'）。\n" +
   "  第一次打开要从本站拿十几 MB 的 Pyodide，之后由 sw.js 缓存，离线也能开。\n" +
-  "整个目录一起上传：index.html 引同目录的 local-boot.js、pyodide/、vendor/、wheels/、backend.zip、icons/、blocks/water/、html2canvas.min.js、sw.js、manifest.json。\n" +
+  "整个目录一起上传：index.html 引同目录的 local-boot.js、pyodide/、vendor/、wheels/、backend.zip、icons/、html2canvas.min.js、sw.js、manifest.json。\n" +
   "许可：AGPL-3.0-only。\n", "utf8");
 
 let bytes = 0; for (const f of files) bytes += (await stat(join(dist, f))).size;

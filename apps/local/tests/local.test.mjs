@@ -88,7 +88,10 @@ test("★ 本站文件清单是构建时生成的，不是手写的", async () =
   const list = JSON.parse(m[1]);
   // ★ 漏一个目录，那个目录里的请求就会被排进「等后端」的队里；
   //   而后端自己正等着 pyodide/ 里的 wasm —— 直接死锁。
-  for (const must of ["pyodide/", "vendor/", "wheels/", "icons/", "blocks/", "backend.zip"]) {
+  // ★ 原来这里还有一项 "blocks/"：那份清单是按 dist 里真实有的目录生成的，
+  //   而 blocks/ 下唯一会被拷进 dist 的是 blocks/water/maple-water.js（开屏的水面）。
+  //   开屏整块删掉之后 dist 里不再有 blocks/，这一项自然也不该再要求。
+  for (const must of ["pyodide/", "vendor/", "wheels/", "icons/", "backend.zip"]) {
     assert.ok(list.includes(must), "清单里少了 " + must);
   }
 });

@@ -140,7 +140,7 @@ await writeFile(join(dist, "README.txt"),
   "  · 设置里的外观项存在本机 localStorage，只在这台机器、这个浏览器里有效。\n\n" +
   "本地看一眼：在这个目录里跑 `python3 -m http.server 8425`，然后开 http://localhost:8425\n" +
   "（直接双击 index.html 也能开个大概，但 file:// 下各种路径都不对，起个静态服务器最省事。）\n\n" +
-  "★ 发布时整个目录一起上传：index.html 引的是同目录下的 icons/、blocks/water/、html2canvas.min.js、banner.js。\n" +
+  "★ 发布时整个目录一起上传：index.html 引的是同目录下的 icons/、html2canvas.min.js、banner.js。\n" +
   "许可：AGPL-3.0-only（与完整的连环应用相同）。\n", "utf8");
 
 console.log(`拼好了：dist/ ${files} 个文件 · ${(bytes / 1024).toFixed(0)} KB`);
