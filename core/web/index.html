@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no, interactive-widget=overlays-content">
 <title>连环</title>
 
 <!-- (0826) 颜文字抽屉：他的表在前，我们的换肤在后，顺序反了就换不掉 -->
@@ -449,7 +449,12 @@
 .bgpick button:active{transform:scale(.97)}
 
 html,body{
-  height:100%;width:100%;margin:0;padding:0;
+  /* ★ 高度用 --vvh（壳层推的「不含键盘」的真实高度），兜底 100vh。
+     原来写的是 height:100% —— 那个 100% 参考的是**视口**，
+     键盘一弹（或 WebView 被系统缩）它就跟着变短，
+     于是 .app 的底边提前收住，表现就是「底栏和输入栏只抬了一半」。
+     下面 .app 用 --vvh 也没用，因为父级已经把高度定死了。 */
+  height:var(--vvh, 100vh);width:100%;margin:0;padding:0;
   position:fixed;inset:0;
   overflow:hidden;
   overscroll-behavior:none;
@@ -477,7 +482,12 @@ html,body{
   /* ★ 原来这里扣掉了 --kb，等于键盘一弹整个 app 缩短，底栏和输入框一起被顶上去。
      用户要的是"只顶输入条，底栏和背景待在原地"（底栏就让键盘盖住，微信也是这样）。
      所以这里改回整屏，把 --kb 只加在输入框上（见 .kb-open .composer）。 */
-  height:100dvh;
+  /* ★ 高度用 --vvh（真实可见高度），由壳层推过来；没有就退回 100dvh。
+     为什么不能只用 100dvh：viewport meta 里的 interactive-widget
+     如果是 resizes-content，键盘一弹 dvh 就变短，**底栏和背景会跟着往上走**。
+     现在已经改成 overlays-content，理论上 dvh 不动了；
+     但不同内核支持程度不一，所以再给一个由我们控制的 --vvh 兜底。 */
+  height:var(--vvh, 100dvh);
   overflow:hidden;
   overflow:clip;
   background:var(--bg); color:var(--ink);
@@ -17824,7 +17834,20 @@ window._kmMount = function(){
     root.classList.toggle('kb-open', kb > 0);
   }
 
-  vv.addEventListener('resize', apply);
+  /* 浏览器兜底：没有壳层时，用 visualViewport.height 当可见高度。
+     ★ 只在没被壳层接管时用 —— 壳层给的才是权威值。 */
+  function syncVvh() {
+    if (window.__vvhFromShell) return;
+    if (vv && vv.height > 0) root.style.setProperty('--vvh', Math.round(vv.height) + 'px');
+  }
+  window.__vvhSet = function (h) {
+    h = Math.round(Number(h) || 0);
+    if (h <= 0) return;
+    window.__vvhFromShell = true;
+    root.style.setProperty('--vvh', h + 'px');
+  };
+
+  vv.addEventListener('resize', function () { syncVvh(); apply(); });
   vv.addEventListener('scroll', apply);
   window.addEventListener('orientationchange', function () { setTimeout(apply, 250); });
   apply();

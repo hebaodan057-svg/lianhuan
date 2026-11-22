@@ -19,10 +19,45 @@ class TestSoftKeyboard(unittest.TestCase):
     def setUp(self):
         self.h = app_html()
 
-    def test_viewport_asks_the_browser_to_resize_content(self):
+    def test_viewport_lets_the_keyboard_overlay_instead_of_resizing(self):
+        """viewport 必须让键盘「盖上去」，而不是把布局视口缩小。
+
+        ★ 这条原来是 `interactive-widget=resizes-content`，那是另一种做法：
+          键盘弹出时把布局视口缩小，整个应用跟着变矮 ——
+          底栏和输入框**一起**被顶上去，而且跟 --kb 叠在一起，
+          表现就是「底栏只抬了一半」。
+
+          用户要的是「只顶输入条，底栏和背景留在原位（被键盘盖住）」，
+          所以契约改成 overlays-content。改这两个值里的任何一个，
+          这条测试会立刻红，提醒你别把病根又放回去。
+        """
         m = re.search(r'<meta name="viewport" content="([^"]+)"', self.h)
         self.assertIsNotNone(m)
-        self.assertIn("interactive-widget=resizes-content", m.group(1))
+        self.assertIn("interactive-widget=overlays-content", m.group(1))
+        self.assertNotIn("interactive-widget=resizes-content", m.group(1),
+                         "resizes-content 会让底栏跟着键盘抬，别再放回来")
+
+    def test_html_body_height_does_not_follow_the_viewport(self):
+        """html/body 的高度不能是 100%。
+
+        ★ 100% 参考视口高度。键盘一弹（或 WebView 被缩），它跟着变短，
+          于是 .app 的底边提前收住 —— 表现就是「底栏和输入栏只抬了一半」，
+          而 .app 上写 --vvh 也没用，因为父级已经把高度定死了。
+          改成 var(--vvh, 100vh)：--vvh 由壳层给（不含键盘）。
+        """
+        m = re.search(r"html,body\{([^}]*)\}", self.h)
+        self.assertIsNotNone(m, "找不到 html,body 的样式")
+        block = m.group(1)
+        self.assertIn("--vvh", block, "html/body 的高度要接 --vvh，否则会跟着键盘变矮")
+        self.assertNotRegex(block, r"height:\s*100%\s*;",
+                            "html/body 别再写 height:100%（它跟着视口变）")
+
+    def test_app_height_is_guarded_by_vvh(self):
+        """.app 的高度要有 --vvh 兜底，不能只有 100dvh。"""
+        m = re.search(r"\.app\{([^}]*height:[^}]*)\}", self.h)
+        self.assertIsNotNone(m)
+        self.assertIn("--vvh", m.group(1),
+                      ".app 的高度要接 --vvh（壳层推的不含键盘的真实高度）")
 
     def test_the_keyboard_only_lifts_the_composer(self):
         """键盘弹出时只把输入条顶上来，app 本身不缩短。

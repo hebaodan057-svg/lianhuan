@@ -57,7 +57,8 @@ public class MainActivity extends Activity {
         web = new WebView(this);
         setContentView(web);
 
-        installKeyboardWatcher();   /* ★ 键盘只顶输入条，见方法上的注释 */
+        installKeyboardWatcher();    /* ★ 键盘只顶输入条，见方法上的注释 */
+        installViewHeightWatcher();  /* ★ 底栏不能跟着键盘动：把真实高度告诉页面 */
 
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             WebView.setWebContentsDebuggingEnabled(true);
@@ -98,6 +99,16 @@ public class MainActivity extends Activity {
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, false);
 
         web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView v, String url) {
+                super.onPageFinished(v, url);
+                repushAll();   /* ★ 页面加载完成，把键盘高度/可见高度无条件重推一次。
+                                  两个 push 方法都按「值变了才推」去重，而监听是 onCreate
+                                  装的 —— 页面还没加载完时那次推送会静默失败，值却被记成
+                                  已推过，之后键盘高度没变就永远不重发。
+                                  表现就是「有时候键盘弹出，输入栏和底栏全没抬」。 */
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
                 String url = req.getUrl().toString();
@@ -290,23 +301,108 @@ public class MainActivity extends Activity {
                                                                 android.view.WindowInsets insets) {
                 int imePx = 0;
                 if (android.os.Build.VERSION.SDK_INT >= 30) {
-                    imePx = insets.getInsets(android.view.WindowInsets.Type.ime()).bottom;
+                    /* ★ 用 ime 和 systemBars 的并集取底边，而不是只取 ime。
+                       原因：非 edge-to-edge 时 ime() 只报「盖住窗口」的部分，
+                       而页面铺到了屏幕底，差的正好是导航栏那一条 ——
+                       表现就是「键盘还会挡住一点点输入栏」。
+                       并集的 bottom = 键盘顶边距「窗口底边」的距离，
+                       窗口底边含导航栏，因此比单取 ime 更接近真实遮挡。 */
+                    android.graphics.Insets im = insets.getInsets(
+                            android.view.WindowInsets.Type.ime()
+                            | android.view.WindowInsets.Type.systemBars());
+                    imePx = im.bottom;
                 } else {
-                    /* 老机器：ime 就是底部 systemWindowInset，减掉导航栏剩键盘本身 */
-                    int sysB = insets.getSystemWindowInsetBottom();
-                    int nav = (android.os.Build.VERSION.SDK_INT >= 26)
-                            ? insets.getStableInsetBottom() : 0;
-                    imePx = Math.max(0, sysB - nav);
+                    /* 老机器：底部 inset 就是键盘（含导航栏），不额外减 */
+                    imePx = Math.max(0, insets.getSystemWindowInsetBottom());
                 }
                 int css = Math.max(0, Math.round(imePx / dp));
                 if (css != lastKbCss) {
                     lastKbCss = css;
                     pushKeyboardHeight(css);
                 }
+                /* ★ 这里**不**推 --vvh。inset 变化多半是键盘引起的，
+                   而 --vvh 代表「应用该占多高」，不该因为键盘而变 ——
+                   否则 .app 又变矮，底栏又跟着抬回去了。 */
                 return v.onApplyWindowInsets(insets);
             }
         });
         root.requestApplyInsets();
+    }
+
+    /** 把 WebView 的真实高度（CSS px）推给页面，填 --vvh。
+     *
+     *  为什么：「底栏也跟着键盘抬了半截」这个毛病，根子在 .app 的高度
+     *  （100dvh）被键盘顶小了。viewport 的 interactive-widget 已改成
+     *  overlays-content，理论上视口不该再缩；但 WebView 对它的支持不齐，
+     *  所以干脆把「它实际多高」告诉页面，由我们自己铺满。
+     */
+    private int lastVvh = -1;
+
+    private void pushViewHeight() {
+        if (web == null) return;
+        final float dp = getResources().getDisplayMetrics().density;
+        final int h = Math.round(web.getHeight() / (dp == 0f ? 1f : dp));
+        if (h <= 0 || h == lastVvh) return;
+        lastVvh = h;
+        web.post(new Runnable() {
+            public void run() {
+                try {
+                    web.evaluateJavascript(
+                        "window.__vvhSet && window.__vvhSet(" + h + ")", null);
+                } catch (Exception ignored) { }
+            }
+        });
+    }
+
+    /** 把当前缓存的两个值**强制**再推一遍，不看去重。
+     *
+     *  为什么需要：pushKeyboardHeight / pushViewHeight 都按「值变了才推」去重。
+     *  而这两个监听是 onCreate 里装的 —— 那时候页面可能还没加载完，
+     *  evaluateJavascript 静默失败，值却被记成"已推过"。
+     *  之后键盘高度没变，就永远不会重发。
+     *  表现：**有时候键盘弹出来，输入栏和底栏全没抬**（点一下收起再弹出才好）。
+     *  所以在页面加载完成时无条件重推一次。
+     */
+    private void repushAll() {
+        if (web == null) return;
+        final int kb = lastKbCss < 0 ? 0 : lastKbCss;
+        final float dp = getResources().getDisplayMetrics().density;
+        final float d = (dp == 0f ? 1f : dp);
+        /* ★ 把「键盘占掉的那部分」加回去，得到**不含键盘**的高度。
+           repushAll 一般在页面加载完成时调（那时没键盘），但为了稳，
+           即使在键盘开着时被调用，算出来的也仍然是整屏高度 ——
+           --vvh 必须跟键盘无关，否则 .app 变矮、底栏又跟着抬。 */
+        final int vh = Math.round((web.getHeight() + kb * d) / d);
+        web.post(new Runnable() {
+            public void run() {
+                try {
+                    if (vh > 0) {
+                        web.evaluateJavascript(
+                            "window.__vvhSet && window.__vvhSet(" + vh + ")", null);
+                    }
+                    web.evaluateJavascript(
+                        "window.__kbSet && window.__kbSet(" + kb + ")", null);
+                } catch (Exception ignored) { }
+            }
+        });
+    }
+
+    /** 布局一变就推一次高度（键盘把 WebView 缩小时，这里最先知道）。 */
+    private int lastWidthPx = -1;
+
+    private void installViewHeightWatcher() {
+        web.addOnLayoutChangeListener(new android.view.View.OnLayoutChangeListener() {
+            public void onLayoutChange(android.view.View v, int l, int t, int r, int b,
+                                       int ol, int ot, int or, int ob) {
+                /* ★ 只在**宽度**变了才推（横竖屏切换、分屏比例变化）。
+                   键盘弹出只改高度不改宽度 —— 那种情况绝不能推，
+                   否则 --vvh 跟着键盘变小，.app 变矮，底栏又跟着抬。 */
+                int w = r - l;
+                if (w <= 0 || w == lastWidthPx) return;
+                lastWidthPx = w;
+                pushViewHeight();
+            }
+        });
     }
 
     /** 把键盘高度推给页面。前端收到后写 --kb 并切 .kb-open（见 index.html 末尾）。 */
