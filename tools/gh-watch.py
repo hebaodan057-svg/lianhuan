@@ -136,6 +136,38 @@ def logs(run_id: int):
                     print(f"（拿不到日志 HTTP {st2}）")
 
 
+def fetch_blob(url: str) -> tuple[int, bytes]:
+    """下载产物：GitHub 会 302 到 blob 存储，token 带过去反而 403。
+
+    所以先带 token 拿 302 的 Location，再用不带 token 的请求取正文。
+    """
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *a, **k):
+            return None
+
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"token {token()}")
+    loc = None
+    try:
+        urllib.request.build_opener(NoRedirect).open(req, timeout=90)
+    except urllib.error.HTTPError as e:
+        loc = e.headers.get("Location")
+        if not loc:
+            return e.code, b""
+    except urllib.error.URLError as e:
+        return 0, str(e.reason).encode()
+    target = loc or url
+    req2 = urllib.request.Request(target)
+    req2.add_header("Accept", "application/octet-stream")
+    try:
+        with urllib.request.urlopen(req2, timeout=300) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, b""
+    except urllib.error.URLError as e:
+        return 0, str(e.reason).encode()
+
+
 def download(run_id: int, outdir="download"):
     st, d = api("GET", f"/repos/{OWNER}/{REPO}/actions/runs/{run_id}/artifacts")
     if st != 200:
@@ -147,8 +179,8 @@ def download(run_id: int, outdir="download"):
     os.makedirs(outdir, exist_ok=True)
     for a in arts:
         print(f"下载 {a['name']}（{a['size_in_bytes'] / 1048576:.1f} MB）…")
-        st2, blob = api("GET", a["archive_download_url"], raw=True)
-        if st2 != 200:
+        st2, blob = fetch_blob(a["archive_download_url"])
+        if st2 != 200 or not blob:
             print(f"✗ HTTP {st2}")
             continue
         zpath = os.path.join(outdir, a["name"] + ".zip")
