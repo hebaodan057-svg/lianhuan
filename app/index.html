@@ -1883,6 +1883,59 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
 .msg .shot{display:block;max-width:200px;border-radius:10px;margin:2px 0}
 .msg.hasshot{flex-direction:column;align-items:flex-start;gap:4px}
 
+/* ★ 图片单占一条（微信那样）：不套气泡背景，只有头像 + 图。
+   原来 <img class="shot"> 塞在气泡里，气泡的底色/圆角/内边距把图包住了，
+   看着像「一张图贴在一张纸上」，而不是「发了一张图」。 */
+#chatlog .msg.shotonly{
+  background:none !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+  box-shadow:none !important;
+  border:0 !important;
+  padding:0 !important;
+  border-radius:0 !important;
+  width:fit-content;
+  max-width:calc(100% - 44px);
+}
+/* 一排图：1 张给单张大图，2~4 张两列，5 张以上三列。
+   用 grid 而不是 flex，靠列数自然决定每格宽度，比算 calc 稳。 */
+#chatlog .msg.shotonly .shots{
+  display:grid;
+  gap:4px;
+  grid-template-columns:1fr;
+}
+#chatlog .msg.shotonly .shots.n2{grid-template-columns:1fr 1fr}
+#chatlog .msg.shotonly .shots.n3{grid-template-columns:1fr 1fr 1fr}
+#chatlog .msg.shotonly .shots img{
+  display:block;
+  width:100%;
+  height:auto;
+  border-radius:10px;
+  object-fit:cover;
+  cursor:zoom-in;
+}
+/* 单张：限高，别让长图把整屏吃掉；多张：统一方形格，像微信九宫格 */
+#chatlog .msg.shotonly .shots.n1 img{max-width:210px;max-height:280px;width:auto}
+#chatlog .msg.shotonly .shots.n2 img,
+#chatlog .msg.shotonly .shots.n3 img{aspect-ratio:1/1}
+/* 图片头顶那道「谁发的」时间，用户自己这边只留一行空白高度，别多一个框 */
+#chatlog .msg.shotonly{position:relative}
+
+/* ★ 点图看大图：全屏黑底，图尽量铺满，点一下关掉。
+   比复用 .shotcard 那套轻——那套是给「导出长截图」用的，带下载/分享按钮。 */
+#bigshot{
+  position:fixed; inset:0; z-index:97; display:none;
+  background:rgba(0,0,0,.92);
+  align-items:center; justify-content:center;
+  padding:12px;
+}
+#bigshot.on{display:flex}
+#bigshot img{
+  max-width:100%; max-height:100%;
+  object-fit:contain; border-radius:6px;
+  box-shadow:0 10px 40px rgba(0,0,0,.6);
+}
+
 /* 他的日记：梦单独一个样子 —— 它跟别的日记不一样，是睡着的时候写的 */
 .dcard{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);
   padding:13px 15px;margin-bottom:11px}
@@ -14105,6 +14158,30 @@ setTimeout(loadAva, 0);
     return paras.length ? paras.slice(0, 40) : [s];
   }
 
+  /* ★ 图片清单：形如 [图片:/uploads/a.jpg|/uploads/b.jpg]，藏在 content 末尾。
+     发送时由 go() 追加（见 shotMark），这里剥出来重画成图 ——
+     不这么做的话，刷新后图片就消失了：turns 表只有 content，
+     图片本身只活在那段给模型看的〔对方发来…〕旁白里，而旁白会被剥掉。 */
+  const SHOT_RE = /\[图片:([^\]\n]*)\]/;
+
+  function paintShots(urls){
+    if (!urls || !urls.length) return;
+    const shot = say('', 'me');
+    shot.classList.add('shotonly');
+    const box = document.createElement('div');
+    const n = urls.length;
+    box.className = 'shots n' + (n === 1 ? '1' : (n <= 4 ? '2' : '3'));
+    urls.forEach(function(u){
+      const im = document.createElement('img');
+      im.alt = ''; im.loading = 'lazy';
+      im.addEventListener('error', function(){ im.remove(); });
+      im.addEventListener('click', function(){ if (window.openShot) window.openShot(u); });
+      im.src = u;
+      box.appendChild(im);
+    });
+    shot.insertBefore(box, shot.firstChild);
+  }
+
   /* 从库里拉。第一次拉整段，之后只拉新的（after=最后一条 id）。
      字段是 chat_log 那张表的原样：id / role / content / think / starred / src / tools_json / ts
      （server.py:2647，别猜——猜错了就是一片空白气泡）。role 只有 'user' 和 'ai'。
@@ -14121,8 +14198,19 @@ setTimeout(loadAva, 0);
     items.forEach(function(m){
       if (m.id > lastId) lastId = m.id;
       const mine = (m.role === 'user');
+      /* ★ 先把图片清单剥出来（只在用户消息上找 —— 图片只会是自己发的）。
+         剥掉之后正文可能空了（只发图没配字），那种情况就不画气泡，只留图。 */
+      let raw = String(m.content == null ? '' : m.content);
+      let shotUrls = null;
+      if (mine){
+        const sm = raw.match(SHOT_RE);
+        if (sm){
+          shotUrls = sm[1].split('|').filter(Boolean);
+          raw = raw.replace(SHOT_RE, '').trim();
+        }
+      }
       /* 用户自己那条一个字不动（||| 是他分句用的）；他的按段拆开 */
-      const parts = mine ? [String(m.content == null ? '' : m.content)] : splitSay(m.content);
+      const parts = mine ? [raw] : splitSay(raw);
       /* 0829 用户单独撤走的那几句（chat_log.hidden_parts）：不上屏。
          整轮撤走的那条老路还在 hidden 那一列，后端拉的时候就已经滤掉了。 */
       const hidp = {};
@@ -14134,6 +14222,11 @@ setTimeout(loadAva, 0);
         /* 思考链贴第一句、音频贴最后一句 —— 是**还留在屏上的**第一句和最后一句 */
         const isFirst = (i === shown[0]), isLast = (i === shown[shown.length - 1]);
         /* ts 每段都传同一个：传 0 会退回 Date.now()，那会在历史中间插一条「现在」 */
+        /* ★ 图先画（跟发送时的顺序一致：图在上、字在下）。
+           只在这一轮的第一段画一次，别每段都画一遍。
+           剥掉清单后正文是空的（只发了图没配字）就到此为止，不画空气泡。 */
+        if (mine && shotUrls && isFirst) paintShots(shotUrls);
+        if (mine && !String(p || '').trim()) return;
         const el = say(p, mine ? 'me' : 'him', (!mine && isFirst) ? m.think : '', m.ts, m.src);
         el.dataset.cid = m.id;                 /* 一条记录拆成几个泡泡，收藏收的是整轮 */
         el.dataset.part = i;                   /* 0829：撤走能只撤一句，得知道是第几句 */
@@ -14535,23 +14628,45 @@ setTimeout(loadAva, 0);
         el.appendChild(fl);
       }
       if (imgs.length){
-        el.classList.add('hasshot');
-        imgs.slice().reverse().forEach(function(u){
+        /* ★ 图片单独成一条，不塞进上面那个气泡里 —— 参照微信：
+             发一组图是「一条消息、几格缩略图」，没有气泡底色包着。
+           原来把 <img> prepend 进 el（那个带背景的气泡），视觉上像
+           图片贴在便签上。现在另起一条 shotonly，把图放进去。
+           有配文时：上面一条图片、下面一条文字，跟微信顺序一致。 */
+        const shot = say('', 'me');
+        shot.classList.add('shotonly');
+        /* say('') 会写一个空字符串进 innerHTML，清掉免得占位 */
+        shot.querySelectorAll('a,span,qref').forEach(n => n.remove());
+        const box = document.createElement('div');
+        const nImg = imgs.length;
+        box.className = 'shots n' + (nImg === 1 ? '1' : (nImg <= 4 ? '2' : '3'));
+        imgs.forEach(function(u){
           const im = document.createElement('img');
-          im.className = 'shot'; im.alt = '';
-          /* 取不到就摘掉，别在气泡里留破图标（/uploads 要登录，cookie 过期也不至于难看） */
+          im.alt = ''; im.loading = 'lazy';
+          /* 取不到就摘掉，别留破图标（/uploads 要登录，cookie 过期也不至于难看） */
           im.addEventListener('error', function(){ im.remove(); });
+          /* 点一下看大图：复用一个临时覆盖层，不引新依赖 */
+          im.addEventListener('click', function(){ openShot(u.url); });
           im.src = u.url;
-          el.prepend(im);
+          box.appendChild(im);
         });
+        shot.insertBefore(box, shot.firstChild);
         toBottom();
       }
       /* ★ 告诉他这些东西躺在服务器哪儿 —— 他要用 Read 亲眼看，不是听我转述。
          这段〔〕在原项目是不进聊天记录的旁白。 */
       const note = attachNote(ups, !!t);
+      /* ★ 图片清单：给「刷新后回放」用的一行机器可读标记。
+         为什么需要它：turns 表里只存 content，图片本身只活在那段〔〕旁白里，
+         而 pull() 画气泡时会把〔〕整段剥掉 —— 于是刷新后图片就没了，只剩一条空消息。
+         这行不换行、跟在正文最后，splitSay 按空行/||| 拆分时不会把它拆断。
+         老消息没有这行，回放逻辑一个字不受影响。 */
+      const shotMark = imgs.length
+        ? '[图片:' + imgs.map(u => u.url).join('|') + ']'
+        : '';
       /* 0906 引用：拼成正文第一行一起发走，发不出去就把泡泡还回来（别让人重挑一遍） */
       const _q1 = window.takeChatQuote && window.takeChatQuote();
-      const _b1 = t ? (note + '\n' + t) : note;
+      const _b1 = (t ? (note + '\n' + t) : note) + shotMark;
       CHAT.send(quoteMark(_q1) + _b1, {voice_feel: takeFeel()}, {echo: false})
         .then(function(ok){ if (!ok && _q1 && window.putChatQuote) window.putChatQuote(_q1); });
       return;
@@ -14561,6 +14676,25 @@ setTimeout(loadAva, 0);
     CHAT.send(quoteMark(_q2) + t, {voice_feel: takeFeel()})
       .then(function(ok){ if (!ok && _q2 && window.putChatQuote) window.putChatQuote(_q2); });
   }
+  /* ★ 点图看大图。挂 window 是因为 go() 在同文件另一个 IIFE 里，
+     那边拿不到这里的局部作用域。 */
+  window.openShot = function(url){
+    if (!url) return;
+    let ov = document.getElementById('bigshot');
+    if (!ov){
+      ov = document.createElement('div');
+      ov.id = 'bigshot';
+      ov.innerHTML = '<img alt="">';
+      /* 点任意处关闭（含图片本身）——跟系统看图一个手感 */
+      ov.addEventListener('click', function(){ ov.classList.remove('on'); });
+      document.body.appendChild(ov);
+    }
+    const im = ov.querySelector('img');
+    im.src = url;
+    ov.classList.add('on');
+  };
+  function openShot(url){ window.openShot(url); }
+
   send.addEventListener('click', go);
   /* ★ 0810 翻案：回车＝换行，⌘/Ctrl+回车＝发送 —— 回车发送太容易把半句话推出去。
        —— 上一版这里写着「换行这条是当初争来的，别改成回车换行」，那是当时定的；

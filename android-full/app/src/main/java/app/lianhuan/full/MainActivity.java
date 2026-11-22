@@ -418,8 +418,14 @@ public class MainActivity extends Activity {
                 }
             }
             if (uris != null && uris.length > 0 && uris[0] != null) {
-                say(report + " → 开始读 " + uris[0].getScheme());
-                deliverFromJava(uris[0]);
+                say(report + " → 读 " + uris.length + " 张");
+                /* ★ 多选：以前只 deliverFromJava(uris[0])，后面几张全丢。
+                   deliverFromJava 内部是新线程，循环起多个互不阻塞；
+                   每张读完各自调一次 __pickArrived，页面依次 staged.push。 */
+                for (int i = 0; i < uris.length; i++) {
+                    if (uris[i] == null) continue;
+                    deliverFromJava(uris[i]);
+                }
             } else {
                 say(report + " → 最终为空");
             }
