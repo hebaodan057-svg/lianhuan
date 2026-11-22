@@ -57,6 +57,8 @@ public class MainActivity extends Activity {
         web = new WebView(this);
         setContentView(web);
 
+        installKeyboardWatcher();   /* ★ 键盘只顶输入条，见方法上的注释 */
+
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             WebView.setWebContentsDebuggingEnabled(true);
         }
@@ -259,6 +261,65 @@ public class MainActivity extends Activity {
             }
             pendingMic = null;
         }
+    }
+
+    /** 监听软键盘高度，把「键盘盖住了多少 CSS px」写进页面的 --kb。
+     *
+     *  为什么需要它：Manifest 已经改成 adjustNothing —— 键盘弹出时 WebView
+     *  **不再被系统缩小**（这才是「底栏和背景留在原位」能成立的前提）。
+     *  但前端要知道输入框该抬多高，就得有一个确切的数字。
+     *  WebView 里没有 Compose 的 WindowInsets.ime 那种现成东西
+     *  （cleos 是原生 Compose，抄不过来），只能在壳层算好推给页面。
+     *
+     *  ★ 为什么不 setDecorFitsSystemWindows(false)：
+     *    那会让内容铺到状态栏下面。页面里到处用 env(safe-area-inset-top)，
+     *    在没开 edge-to-edge 的 WebView 里那个值是 0 —— 顶栏会被状态栏压住。
+     *    为了量一个键盘高度把整个顶栏搞乱，不值得。
+     *    挂在 decorView 上照样能拿到 ime inset。
+     */
+    private int lastKbCss = -1;
+
+    private void installKeyboardWatcher() {
+        final float density = getResources().getDisplayMetrics().density;
+        final float dp = (density == 0f ? 1f : density);
+
+        android.view.View root = getWindow().getDecorView();
+        root.setOnApplyWindowInsetsListener(new android.view.View.OnApplyWindowInsetsListener() {
+            @Override
+            public android.view.WindowInsets onApplyWindowInsets(android.view.View v,
+                                                                android.view.WindowInsets insets) {
+                int imePx = 0;
+                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                    imePx = insets.getInsets(android.view.WindowInsets.Type.ime()).bottom;
+                } else {
+                    /* 老机器：ime 就是底部 systemWindowInset，减掉导航栏剩键盘本身 */
+                    int sysB = insets.getSystemWindowInsetBottom();
+                    int nav = (android.os.Build.VERSION.SDK_INT >= 26)
+                            ? insets.getStableInsetBottom() : 0;
+                    imePx = Math.max(0, sysB - nav);
+                }
+                int css = Math.max(0, Math.round(imePx / dp));
+                if (css != lastKbCss) {
+                    lastKbCss = css;
+                    pushKeyboardHeight(css);
+                }
+                return v.onApplyWindowInsets(insets);
+            }
+        });
+        root.requestApplyInsets();
+    }
+
+    /** 把键盘高度推给页面。前端收到后写 --kb 并切 .kb-open（见 index.html 末尾）。 */
+    private void pushKeyboardHeight(final int css) {
+        if (web == null) return;
+        web.post(new Runnable() {
+            public void run() {
+                try {
+                    web.evaluateJavascript(
+                        "window.__kbSet && window.__kbSet(" + css + ")", null);
+                } catch (Exception ignored) { }
+            }
+        });
     }
 
     /** 把选中的图读出来、缩到长边 1280、压 JPEG(0.82)、base64，交给页面。

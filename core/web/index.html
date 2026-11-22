@@ -1457,6 +1457,13 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
 .app.kb-open .selbar{
   bottom:calc(var(--kb, 0px) + 8px);
 }
+/* ★ 键盘挡住的这块，消息列表底部也要让出来。
+   不然输入条跳上去了，最后几条还是藏在它和键盘底下，滚到底也看不见。
+   100px 是原本给底栏留的余量，键盘开着时底栏被盖住，那就直接用 --kb。 */
+.app.kb-open .body{
+  padding-bottom:calc(var(--kb, 0px) + 16px);
+}
+/* 底栏在键盘弹出时被盖住，就没必要再往上飘 —— 保持在原位（用户要的效果） */
 /* 老内核不认 backdrop-filter，退回实心卡片，别糊成一片 */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .composer{background:var(--card)}
@@ -17781,7 +17788,31 @@ window._kmMount = function(){
   var vv = window.visualViewport;
   if (!vv) return;                         // 老浏览器：维持原样，不比现在差
   var root = document.documentElement, last = -1;
+  /* ★ 壳层推过来的值优先。Java 那边监听 WindowInsets.ime()，
+     已经除过 density 换成 CSS px（见 MainActivity.installKeyboardWatcher）。
+     为什么需要它：Manifest 改成 adjustNothing 之后 WebView 不再被缩，
+     下面那段按 visualViewport 算的逻辑在 APK 里会算成 0，输入框就不抬。 */
+  /* ★ 只有收到「真的 > 0」的值才接管。
+     否则 Java 初始化时推的那次 0 会把 fromShell 永久置真，
+     而这台机器万一拿不到 ime inset（adjustNothing + 非 edge-to-edge
+     在部分 ROM 上就是不报），--kb 就永远是 0，输入框一动不动 ——
+     比改之前更糟（之前 visualViewport 至少还能算对）。
+     现在两种机器都不会坏：
+       · 拿得到 ime：第一次推非零就接管，之后（含收起时推 0）都听它的
+       · 拿不到 ime：一直推 0，永远不接管，visualViewport 照旧兜底 */
+  var fromShell = false;
+  window.__kbSet = function (n) {
+    n = Math.max(0, Math.round(Number(n) || 0));
+    if (n > 0) fromShell = true;
+    if (!fromShell) return;
+    if (n === last) return;
+    last = n;
+    root.style.setProperty('--kb', n + 'px');
+    root.classList.toggle('kb-open', n > 0);
+  };
+
   function apply() {
+    if (fromShell) return;                 /* 壳层接管后，别被 visualViewport 覆盖回 0 */
     var kb = 0;
     if (!(vv.scale > 1.01)) {              // 放大时不算数
       kb = Math.round(window.innerHeight - vv.height - vv.offsetTop);
@@ -17792,6 +17823,7 @@ window._kmMount = function(){
     root.style.setProperty('--kb', kb + 'px');
     root.classList.toggle('kb-open', kb > 0);
   }
+
   vv.addEventListener('resize', apply);
   vv.addEventListener('scroll', apply);
   window.addEventListener('orientationchange', function () { setTimeout(apply, 250); });
