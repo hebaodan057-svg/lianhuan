@@ -261,8 +261,23 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int code, int result, Intent data) {
         if (code == REQ_FILE && filePick != null) {
-            filePick.onReceiveValue(
-                WebChromeClient.FileChooserParams.parseResult(result, data));
+            Uri[] uris = WebChromeClient.FileChooserParams.parseResult(result, data);
+            /* ★ 必须把选中的 content:// URI 显式授权给 WebView。
+                 系统把结果交给 Activity 时带的是「只给这个 Activity」的临时权限，
+                 WebView 那边拿 Uri 去读的时候不一定能继承到 —— 不给就会是
+                 「选图成功、界面啥也没出现」。这是个很典型的坑，参见
+                 .operit/attachments 里那份《照片功能修复教学》的坑 3。
+                 （之前只调 parseResult 就回填，所以浏览器能用、APK 不能。） */
+            if (uris != null) {
+                for (Uri u : uris) {
+                    if (u == null) continue;
+                    try {
+                        grantUriPermission(getPackageName(), u,
+                                           Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception ignored) { }
+                }
+            }
+            filePick.onReceiveValue(uris);
             filePick = null;
             return;
         }
