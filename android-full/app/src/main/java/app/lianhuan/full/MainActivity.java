@@ -258,9 +258,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    @Override
     /** 把一句诊断话弹到页面上。debug 用：文件选择这条路在 WebView 里全是静默失败，
-     *  不报出来根本不知道卡在 Java 还是 JS。 */
+     *  不报出来根本不知道卡在 Java 还是 JS。
+     *  ★ 这个帮手必须放在 onActivityResult 的 @Override 之前，否则会抢走那个注解。 */
     private void say(final String m){
         try {
             final String safe = m.replace("'", "").replace("\n", " ");
@@ -273,6 +273,7 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) { }
     }
 
+    @Override
     protected void onActivityResult(int code, int result, Intent data) {
         if (code == REQ_FILE && filePick != null) {
             Uri[] uris = WebChromeClient.FileChooserParams.parseResult(result, data);
