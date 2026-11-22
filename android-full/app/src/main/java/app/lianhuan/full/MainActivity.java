@@ -228,7 +228,7 @@ public class MainActivity extends Activity {
             c.disconnect();
             // 只取 "nonce" 字段，不引第三方 JSON 库
             String body = bo.toString("UTF-8");
-            int i = body.indexOf(""nonce"");
+            int i = body.indexOf("nonce");
             if (i < 0) return "";                      // 有应答但不是连环的形状
             int q1 = body.indexOf('"', body.indexOf(':', i));
             int q2 = body.indexOf('"', q1 + 1);
