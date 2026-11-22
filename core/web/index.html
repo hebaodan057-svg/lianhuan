@@ -14325,8 +14325,34 @@ setTimeout(loadAva, 0);
   picpick.addEventListener('change',    function(){ take(picpick.files); });
   pick.addEventListener('change',        function(){ take(pick.files); });
   folderpick.addEventListener('change',  function(){ take(folderpick.files); });
+  /* ★★ Java 直接送图进来的入口（见文件末尾那段「照片进入通道」）。
+
+     为什么不走 pickPhotos → input.click → onShowFileChooser：
+     那条路在 APK 里试了三次都不通（FileReader 释放 / grantUriPermission /
+     复制成本地文件），页面始终收不到东西。现在 Java 自己把图读成 base64，
+     调 __pickAccept 直接交给这里的 staged，跟浏览器里挑完图是一模一样的结果。
+
+     这个函数必须定义在 take() 同一个作用域里 —— 它要直接用 staged、drawStage、
+     setStat 这些闭包变量，挂在 window 上的外面那层拿不到。 */
+  window.__MAXN = MAXN;
+  window.__pickAccept = function(dataURL, name){
+    if (!dataURL) return false;
+    let room = MAXN - staged.length;
+    if (room <= 0){ setStat('一次最多 ' + MAXN + ' 样'); setTimeout(() => setStat(''), 2200); return false; }
+    staged.push({kind: 'img', dataURL: dataURL, name: name || '照片'});
+    drawStage();
+    try { ta.focus(); } catch (e) { }
+    setStat(staged.length + ' 样等着 · 说句话一起发');
+    setTimeout(() => setStat(''), 2600);
+    return true;
+  };
+
   /* 加号菜单里这三项调它们（见 openEntry 那边的 __pick） */
-  window.pickPhotos = () => { picpick.value = '';    picpick.click(); };
+  window.pickPhotos = () => {
+    /* 先留个痕：如果连这行都不出现，说明点击根本没到 JS（CSS 吃掉了？） */
+    try { if (window.__pickTrace) window.__pickTrace('已点击「照片」，准备打开选择器'); } catch (e) { }
+    picpick.value = '';    picpick.click();
+  };
   window.pickFiles  = () => { pick.value = '';        pick.click(); };
   window.pickFolder = () => { folderpick.value = '';  folderpick.click(); };
 
@@ -18204,4 +18230,75 @@ window._kmMount = function(){
     try { navigator.vibrate(8); } catch (err) {}
   }, true);
 })();
+
 </script>
+
+<script>
+/* ============================================================================
+   ★ 照片进入通道（Java → 页面）
+
+   WebView 的 onShowFileChooser 这条路在 APK 里一直不通：选了图，页面收不到东西。
+   先后怀疑过 FileReader 释放、URI 授权、Photo Picker 一次性权限，都没解决。
+
+   所以改成：Java 侧拿到 Activity 的临时权限后自己把图读出来，解成 base64，
+   直接调这里的 __pickArrived()。这条路上没有任何 URI 传递、没有权限继承，
+   页面只需把一个 data: URL 塞进 staged —— 跟浏览器里完全一样。
+
+   另外挂一条诊断条（#pickdiag），每一步都写在上面。之前几次失败都是静默失败，
+   根本不知道卡在哪，白白猜了三轮。
+   ========================================================================== */
+(function(){
+  'use strict';
+
+  function diag(txt){
+    var el = document.getElementById('pickdiag');
+    if (!el){
+      el = document.createElement('div');
+      el.id = 'pickdiag';
+      el.style.cssText = [
+        'position:fixed', 'left:10px', 'right:10px', 'top:10px', 'z-index:99999',
+        'background:#111', 'color:#fff', 'font:12px/1.5 monospace',
+        'padding:8px 10px', 'border-radius:10px', 'word-break:break-all',
+        'box-shadow:0 6px 24px rgba(0,0,0,.35)', 'display:none'
+      ].join(';');
+      el.addEventListener('click', function(){ el.style.display = 'none'; });
+      document.body.appendChild(el);
+    }
+    el.style.display = 'block';
+    el.textContent = txt;
+    /* 也让 toast 走一遍（有些人更习惯看那个） */
+    try { if (window.toast) window.toast(txt, 4000); } catch (e) { }
+  }
+  window.__pickDiag = diag;
+
+  /* Java 读到图后调这里。mime 决定文件名后缀，b64 是纯 base64（不带 data: 前缀）。 */
+  window.__pickArrived = function(b64, mime, name, note){
+    try {
+      if (!b64){ diag('✗ Java 说读到了，但内容是空的'); return; }
+      var url = 'data:' + (mime || 'image/jpeg') + ';base64,' + b64;
+
+      /* 只跟「让它变小」有关的逻辑走原来的 compress 那条路是行不通的
+         （compress 要吃 File）。这里换成直接收下 —— 图已经是 JPEG 质量 82 了。 */
+      var MAXN = (typeof window.__MAXN === 'number') ? window.__MAXN : 9;
+      if (typeof window.__pickAccept === 'function'){
+        window.__pickAccept(url, name || ('照片.' + ((mime || 'jpg').split('/')[1] || 'jpg')));
+        diag('✓ 收到了 ' + Math.round(b64.length * 0.75 / 1024) + 'KB' + (note ? '（' + note + '）' : ''));
+      } else {
+        diag('✗ 页面没有 __pickAccept（前端脚本没加载完？）');
+      }
+    } catch (e) {
+      diag('✗ 页面处理出错：' + e);
+    }
+  };
+
+  window.__pickFailed = function(msg){
+    diag('✗ Java 侧失败：' + msg);
+  };
+
+  /* 用户点「照片」时先打一行，确认按钮这一下真的到页面了 */
+  window.__pickTrace = function(where){
+    diag('… ' + where);
+  };
+})();
+</script>
+

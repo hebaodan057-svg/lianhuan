@@ -12,7 +12,10 @@ import android.annotation.SuppressLint;
 import android.app.DownloadManager;
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.util.Base64;
 import android.os.Bundle;
 import android.os.Environment;
 import android.webkit.PermissionRequest;
@@ -258,6 +261,96 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** 把选中的图读出来、缩到长边 1280、压 JPEG(0.82)、base64，交给页面。
+     *
+     *  为什么不让 WebView 自己读：在 APK 里这条路从没通过 —— 页面收到的是空东西，
+     *  连 onerror 都不触发。而 Activity 手上这份临时读权限是有效的（能开相册、
+     *  能拿到 Uri 就说明了）。所以在这里一次做完，交给页面一个 data: URL，
+     *  页面对它跟对浏览器里挑完的 File 完全一样。
+     *
+     *  规格跟网页里的 compress() 对齐：长边 1280、JPEG 质量 0.82。
+     */
+    private void deliverFromJava(final Uri u) {
+        new Thread(new Runnable() {
+            public void run() {
+                String b64;
+                try {
+                    /* 先只读尺寸，避免一亿像素的图直接把内存打爆 */
+                    BitmapFactory.Options probe = new BitmapFactory.Options();
+                    probe.inJustDecodeBounds = true;
+                    java.io.InputStream is0 = getContentResolver().openInputStream(u);
+                    if (is0 == null) { fail("打不开这个 Uri"); return; }
+                    BitmapFactory.decodeStream(is0, null, probe);
+                    is0.close();
+                    if (probe.outWidth <= 0 || probe.outHeight <= 0) {
+                        fail("解不出尺寸（可能不是图片）");
+                        return;
+                    }
+
+                    /* 按 2 的幂采样，先砍到接近 1280 */
+                    int mx = 1280, sample = 1;
+                    while (probe.outWidth / (sample * 2) >= mx
+                        || probe.outHeight / (sample * 2) >= mx) {
+                        sample *= 2;
+                    }
+                    BitmapFactory.Options opt = new BitmapFactory.Options();
+                    opt.inSampleSize = sample;
+                    java.io.InputStream is1 = getContentResolver().openInputStream(u);
+                    if (is1 == null) { fail("第二次也打不开"); return; }
+                    Bitmap bmp = BitmapFactory.decodeStream(is1, null, opt);
+                    is1.close();
+                    if (bmp == null) { fail("解码失败"); return; }
+
+                    /* 再精确缩到长边 1280，尽量少损画质 */
+                    int w = bmp.getWidth(), h = bmp.getHeight();
+                    float sc = Math.min((float) mx / w, (float) mx / h);
+                    if (sc < 1f) {
+                        Bitmap small = Bitmap.createScaledBitmap(bmp,
+                                Math.max(1, (int) (w * sc)),
+                                Math.max(1, (int) (h * sc)), true);
+                        if (small != bmp) bmp.recycle();
+                        bmp = small;
+                    }
+
+                    /* ★ 顺序要紧：先压进 ByteArrayOutputStream，再 recycle */
+                    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 82, bo);
+                    int ow = bmp.getWidth(), oh = bmp.getHeight();
+                    bmp.recycle();
+                    byte[] raw = bo.toByteArray();
+                    bo.close();
+                    b64 = Base64.encodeToString(raw, Base64.NO_WRAP);
+                    final String note = ow + "x" + oh + " " + (raw.length / 1024) + "KB";
+                    final String payload = b64;
+                    web.post(new Runnable() {
+                        public void run() {
+                            web.evaluateJavascript(
+                                "window.__pickArrived && window.__pickArrived('"
+                                + payload + "','image/jpeg','照片.jpg','" + note + "')", null);
+                        }
+                    });
+                } catch (SecurityException se) {
+                    fail("没有读权限");
+                } catch (OutOfMemoryError oe) {
+                    fail("图太大，内存不够");
+                } catch (Exception e) {
+                    fail(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+
+            private void fail(String why) {
+                final String w = (why == null ? "未知" : why)
+                        .replace("'", "").replace("\n", " ").replace("\r", " ");
+                web.post(new Runnable() {
+                    public void run() {
+                        web.evaluateJavascript(
+                            "window.__pickFailed && window.__pickFailed('" + w + "')", null);
+                    }
+                });
+            }
+        }).start();
+    }
+
     /** 把一句诊断话弹到页面上。debug 用：文件选择这条路在 WebView 里全是静默失败，
      *  不报出来根本不知道卡在 Java 还是 JS。
      *  ★ 这个帮手必须放在 onActivityResult 的 @Override 之前，否则会抢走那个注解。 */
@@ -327,7 +420,26 @@ public class MainActivity extends Activity {
                     }
                 }
             }
-            filePick.onReceiveValue(uris);
+            /* ★★ 不再把 Uri 回填给 WebView，改成自己读、自己解码、直接送给页面。
+               见 index.html 末尾的 window.__pickArrived()。
+
+               前面三次尝试（FileReader 提前释放 / grantUriPermission /
+               把 content:// 复制成本地文件再回填）都建立在同一个前提上：
+               「把 Uri 交给 WebView，让它自己去读」。而这个前提在本机上不成立 ——
+               页面始终收到空东西，且连错误都不报。
+
+               现在这条路没有任何 Uri 传递、没有权限继承问题：
+               Activity 手上这份临时读权限是确实有效的（能打开相册、能拿到 Uri），
+               在这里一次读完、压成 JPEG、base64，交给页面一个 data: URL。
+               页面对它就跟对浏览器里挑完的 File 一样。 */
+            if (uris != null && uris.length > 0 && uris[0] != null) {
+                say("选到 " + uris.length + " 项，开始读");
+                deliverFromJava(uris[0]);
+            } else {
+                say("没拿到 Uri");
+            }
+            /* WebView 的回调必须收尾，否则下次选图它不会再来问 */
+            try { filePick.onReceiveValue(null); } catch (Exception ignored) { }
             filePick = null;
             return;
         }
