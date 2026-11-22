@@ -259,6 +259,20 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    /** 把一句诊断话弹到页面上。debug 用：文件选择这条路在 WebView 里全是静默失败，
+     *  不报出来根本不知道卡在 Java 还是 JS。 */
+    private void say(final String m){
+        try {
+            final String safe = m.replace("'", "").replace("\n", " ");
+            web.post(new Runnable(){
+                public void run(){
+                    web.evaluateJavascript(
+                        "window.toast && window.toast('' + '" + safe + "')", null);
+                }
+            });
+        } catch (Exception ignored) { }
+    }
+
     protected void onActivityResult(int code, int result, Intent data) {
         if (code == REQ_FILE && filePick != null) {
             Uri[] uris = WebChromeClient.FileChooserParams.parseResult(result, data);
@@ -302,8 +316,10 @@ public class MainActivity extends Activity {
                         out.flush(); out.close(); out = null;
                         in.close(); in = null;
                         uris[i] = Uri.fromFile(dst);
-                    } catch (Exception ignored) {
-                        /* 复制不了就保留原 Uri，至少不比以前更差 */
+                        say("取到 " + (dst.length() / 1024) + "KB");
+                    } catch (Exception ex) {
+                        /* 复制不了就保留原 Uri，至少不比以前更差；但要说出来，否则又是静默失败 */
+                        say("复制失败 " + ex.getClass().getSimpleName());
                     } finally {
                         try { if (out != null) out.close(); } catch (Exception ignored) { }
                         try { if (in != null) in.close(); } catch (Exception ignored) { }

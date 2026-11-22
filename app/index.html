@@ -14237,10 +14237,18 @@ setTimeout(loadAva, 0);
         cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
         cb(cv.toDataURL('image/jpeg', 0.82));
       };
-      img.onerror = function(){ cb(null); };
+      /* ★ 诊断：读不出来就别默默吞了 —— 用户递过来说是「选完图什么都没出现」，
+         而静默失败根本无从下手。现在直接把卡在哪一步弹出来。 */
+      img.onerror = function(){
+        if (window.toast) window.toast('图片解码失败（文件可能是空的）');
+        cb(null);
+      };
       img.src = rd.result;
     };
-    rd.onerror = function(){ cb(null); };
+    rd.onerror = function(){
+      if (window.toast) window.toast('读不到这个文件（权限或内容为空）');
+      cb(null);
+    };
     rd.readAsDataURL(file);
   }
   const FIC = '<span class="fic"><svg viewBox="0 0 24 24">'
