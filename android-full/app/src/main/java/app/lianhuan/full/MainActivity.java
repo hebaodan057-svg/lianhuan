@@ -164,8 +164,26 @@ public class MainActivity extends Activity {
                 boot.callAttr("start", getFilesDir().getAbsolutePath(), PORT);
                 String token = boot.callAttr("token").toString();
                 androidToken = token;
+                // ★ 这枚指纹只用来回答一个问题：8420 上那个后端是不是我自己起的。
+                String want = boot.callAttr("nonce").toString();
                 for (int i = 0; i < 100; i++) {          // 最多等 20 秒
-                    if (alive()) {
+                    String err = boot.callAttr("boot_error").toString();
+                    if (err != null && !err.isEmpty()) {
+                        runOnUiThread(() -> show(err));     // 端口被占，或起不来：直说
+                        return;
+                    }
+                    String got = handshake();
+                    if (got != null) {
+                        if (!got.equals(want)) {
+                            // ★ 最要紧的一条：端口应答了，但应答的不是我。
+                            //   旧代码在这里就把页面开了 —— 开的是别人的后端，
+                            //   说的话也进了别人的库。宁可不开，把话说清楚。
+                            runOnUiThread(() -> show(
+                                "8420 上跑的不是连环自己的后端（另一个程序占着这个端口）。"
+                                + "连环没有打开它 —— 那样说的话会存到别人那里去。"
+                                + "关掉占着 8420 的程序再开一次。"));
+                            return;
+                        }
                         runOnUiThread(() -> CookieManager.getInstance().setCookie(
                             BASE, "lh_android=" + token + "; Path=/; HttpOnly; SameSite=Strict",
                             ok -> {
@@ -184,16 +202,41 @@ public class MainActivity extends Activity {
         }, "lianhuan-boot").start();
     }
 
-    private boolean alive() {
+    /**
+     * 问 8420 上那个后端：你是谁？
+     *
+     * <p>返回它自称的指纹；null = 还没起来（或根本不是连环）。
+     *
+     * <p>★ 旧版本这里只问「活着吗」（GET /manifest.json 回 200 就算）。
+     * 可「端口能应答」不等于「应答的是我」——只要 8420 被别的进程占着，
+     * 那一步就会把别人的页面当成自己的开起来。开发服占 8420 那次就这么中的。
+     */
+    private String handshake() {
+        HttpURLConnection c = null;
         try {
-            HttpURLConnection c = (HttpURLConnection) new URL(BASE + "/manifest.json").openConnection();
+            c = (HttpURLConnection) new URL(BASE + "/api/android/hello").openConnection();
             c.setConnectTimeout(300);
-            c.setReadTimeout(300);
+            c.setReadTimeout(400);
             int code = c.getResponseCode();
+            if (code != 200) { c.disconnect(); return null; }
+            java.io.InputStream in = c.getInputStream();
+            java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[512];
+            int n;
+            while ((n = in.read(buf)) > 0) bo.write(buf, 0, n);
+            in.close();
             c.disconnect();
-            return code == 200 || code == 401; // 401 = 后端已起，只是在等原生层放随机票
+            // 只取 "nonce" 字段，不引第三方 JSON 库
+            String body = bo.toString("UTF-8");
+            int i = body.indexOf(""nonce"");
+            if (i < 0) return "";                      // 有应答但不是连环的形状
+            int q1 = body.indexOf('"', body.indexOf(':', i));
+            int q2 = body.indexOf('"', q1 + 1);
+            if (q1 < 0 || q2 < 0) return "";
+            return body.substring(q1 + 1, q2);
         } catch (Exception e) {
-            return false;
+            if (c != null) c.disconnect();
+            return null;                               // 还没起来，等下再问
         }
     }
 

@@ -136,8 +136,13 @@ key 存在你自己这台机器的 `data/secrets.json` 里，网页本身不拿�
 ```bash
 # 或者手动
 pip install -r requirements.txt
-python -m core.server        # 加 --lan 让同一个 wifi 的手机也能连
+python -m core.server --port 8601   # 加 --lan 让同一个 wifi 的手机也能连
 ```
+
+★ **别用 8420。** 那是安卓完整体 APK 自己的端口（写死在 `android-full` 的 Java 里）。
+本机这份占着 8420 再把 APK 打开，APK 会连到本机这一份 —— 你看到的是这里的页面，
+说的话也存进这里的 `data/lianhuan.db`，APK 沙箱里那份一个字不动。
+它不报错，只是看起来像成功了。见 [docs/PORT.md](docs/PORT.md)。
 
 装完还差什么，`NEXT-STEPS.md` 里按你的选择写清楚了。
 

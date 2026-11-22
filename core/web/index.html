@@ -1279,14 +1279,6 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
   display:flex;align-items:center;justify-content:center;
 }
 .hintline{font-size:11px;color:var(--hint);margin-top:5px;text-align:center}
-.crab{
-  position:absolute;right:14px;bottom:calc(202px + env(safe-area-inset-bottom,0px));width:52px;height:52px;
-  cursor:pointer;transition:transform .3s cubic-bezier(.3,1.6,.5,1);z-index:5;
-}
-.crab.jump{transform:translateY(-16px)}
-.crab.dragging{cursor:grabbing;transition:none;transform:scale(1.08)}
-.crab{touch-action:none}          /* 手机上不让它跟页面抢滑动 */
-.crab img{width:100%;height:100%;display:block;pointer-events:none}
 
 /* ── 底栏 ── */
 .tabbar{
@@ -1863,15 +1855,6 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
 .tuner .lb b{color:var(--maple);font-weight:600;font-variant-numeric:tabular-nums}
 .tuner input[type=range]{width:100%;accent-color:var(--maple)}
 .tuner small{display:block;font-size:11.5px;color:var(--hint);margin-top:9px;line-height:1.6}
-/* 桌宠的十二个动作，挑一个当常态。每张 SVG 自己会动，所以这一格就是活的预览。 */
-.posegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-.pose{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 2px 7px;
-  border:1.5px solid var(--line);background:var(--card2);border-radius:13px;cursor:pointer;
-  font-family:inherit;font-size:10.5px;line-height:1.25;color:var(--sub);text-align:center;
-  transition:transform .28s var(--spring-pop),border-color .2s var(--e-out),color .2s var(--e-out)}
-.pose:active{transform:scale(.955)}
-.pose.on{border-color:var(--maple);background:var(--maple-soft);color:var(--maple);font-weight:600}
-.pose img{width:38px;height:38px;display:block;pointer-events:none}
 .tuner .fldlb{display:block;font-size:12px;color:var(--sub);margin:12px 0 0}
 .tuner .fld{width:100%;border:1px solid var(--line);background:var(--card2);color:var(--ink);
   border-radius:11px;padding:11px 13px;outline:none;margin-top:5px;
@@ -2663,123 +2646,6 @@ input[type=range]::-moz-range-thumb{
 .grip{display:flex;flex-direction:column;gap:3px}
 .grip i{display:block;width:15px;height:1.6px;background:var(--hint);border-radius:2px}
 
-/* ══ 开屏 · 枫叶水面（0810）══
-   进门之后每次都放的那一段浅溪。划开 → 大波浪 → 慢慢化开 → 进主页。
-   没有时钟、没有提示语、没有输入框，口令那套在 /login，跟这儿没关系。
-
-   ⚠⚠ 所有选择器一律限定在 #splash 下、内部元素一律 sp- 前缀、keyframes 也带前缀。
-      理由：这份文件里已经有一个 .leaf（底栏那颗枫叶按钮，4 处）。
-      裸类名漏进别的地方，是这个项目栽过五次的同一个坑（最近一次是 0806 的 .sw）。
-
-   ★ 底线：开屏是盖在 app 上的一层布，任何情况下都必须能揭掉 —— p5 没加载出来、
-      CDN 挂了、老浏览器不认，一律退回纯纸底并放行，绝不把用户关在外面。 */
-#splash{
-  position:fixed; inset:0; z-index:9999;
-  display:flex; align-items:flex-start; justify-content:center;
-  padding-top:11vh;
-  --sp-paper:#f4ead4;
-  background:var(--sp-paper);
-  transition:opacity .62s var(--e-out);
-}
-#splash.sp-gone{ opacity:0; pointer-events:none }
-
-/* 水面。不能 pointer-events:none —— 涟漪、推叶子、划开全靠它自己收指针事件。 */
-#splash #sp-water{
-  position:absolute; inset:0; z-index:0;
-  touch-action:none; cursor:grab;
-  opacity:0; transition:opacity 1s var(--e-out);
-}
-#splash #sp-water.sp-on{opacity:1}
-
-/* 晕影：把中间最花的一条压下去，字才浮得起来（值照用户那份设计稿） */
-#splash .sp-vig{
-  position:absolute; inset:0; z-index:1; pointer-events:none; opacity:0;
-  transition:opacity 1s var(--e-out);
-  background:linear-gradient(to bottom,
-    rgba(250,243,226,.58),
-    rgba(250,243,226,.14) 20%,
-    rgba(250,243,226,0)   36%,
-    rgba(250,243,226,0)   68%,
-    rgba(250,243,226,.22) 86%,
-    rgba(250,243,226,.56));
-}
-#splash.sp-lit .sp-vig{opacity:1}
-
-/* 只留名字。摆在顶上那条带子里 —— 透视压缩＋远岸雾化＋景深模糊叠出来的干净地带，
-   全画只有这儿放得下字。正中间是叶子最密最实的一块。 */
-#splash .sp-mark{position:relative;z-index:2;text-align:center;pointer-events:none}
-#splash .sp-leaf{
-  width:38px;height:38px;display:inline-block;color:var(--maple);
-  animation:sp-fall 1.5s var(--e-out) forwards, sp-sway 5.5s 1.6s ease-in-out infinite;
-  transform-origin:50% 15%;
-  filter:drop-shadow(0 1px 3px rgba(255,250,236,.9));
-}
-#splash .sp-leaf svg{width:100%;height:100%;fill:currentColor;display:block}
-#splash .sp-name{
-  font-weight:500; font-size:23px; letter-spacing:.22em; margin:10px 0 0;
-  text-indent:.22em;
-  /* 0810 定的：墨色太突兀 —— 换成叶子的颜色，跟上面那片枫叶一体。 */
-  color:var(--maple);
-  opacity:0; animation:sp-rise .62s 1.05s var(--e-out) forwards;
-  /* 字换成红色之后这圈亮影更要紧：它是把字从同色的叶子里托出来的唯一一层。
-     柔光晕试过，在密叶毯上不管用，必须是紧而亮的。 */
-  text-shadow:0 1px 2px rgba(255,250,236,.95), 0 2px 16px rgba(255,248,232,.8);
-}
-/* ── 滑动进度（0810 补回来）──
-   我上一版删「滑动推开落叶」那行字时，把整块 UI 连进度条一起删了。
-   但进度条不是提示文字：它是这一屏**唯一的可玩性反馈** ——
-   滑到哪儿了、还差多少到底、松手会不会退回来，全靠它说。
-   ★ 由 onProgress 每帧直接写 style.transform 驱动（用户原稿里就写着别走框架状态，
-     那是每一个指针帧都在变的东西）。松手不到 100% 会以 1.7/s 弹回 0，水面自己管。 */
-#splash .sp-track{
-  position:absolute; z-index:2; pointer-events:none;
-  left:30px; right:30px;
-  bottom:calc(34px + env(safe-area-inset-bottom,0px));
-  height:2px; border-radius:1px;
-  opacity:0; transition:opacity .8s var(--e-out);
-  /* 两端各 40px 淡到没有，免得像根横在画上的硬棍 */
-  background:linear-gradient(to right,
-    rgba(41,43,49,0), rgba(41,43,49,.14) 40px,
-    rgba(41,43,49,.14) calc(100% - 40px), rgba(41,43,49,0));
-}
-#splash.sp-lit .sp-track{opacity:1}
-#splash .sp-fill{
-  position:absolute; left:0; top:-1px; width:100%; height:4px; border-radius:2px;
-  transform:scaleX(0); transform-origin:left center;
-  background:linear-gradient(to right, rgba(181,83,58,.35), var(--maple));
-  box-shadow:0 0 12px rgba(255,250,238,.8);
-}
-@media (prefers-color-scheme: dark){
-  #splash .sp-track{background:linear-gradient(to right,
-    rgba(238,242,247,0), rgba(238,242,247,.16) 40px,
-    rgba(238,242,247,.16) calc(100% - 40px), rgba(238,242,247,0))}
-  #splash .sp-fill{box-shadow:0 0 12px rgba(0,0,0,.5)}
-}
-
-@keyframes sp-fall{
-  0%  {opacity:0; transform:translateY(-190px) rotate(-38deg)}
-  55% {opacity:1}
-  78% {transform:translateY(6px) rotate(7deg)}
-  100%{opacity:1; transform:translateY(0) rotate(0)}
-}
-@keyframes sp-sway{
-  0%,100%{transform:rotate(0)} 25%{transform:rotate(3.5deg)} 75%{transform:rotate(-3.5deg)}
-}
-@keyframes sp-rise{ from{opacity:0;transform:translateY(9px)} to{opacity:1;transform:translateY(0)} }
-
-/* 深色下那张暖纸太亮，压暗压灰再用（只改观感，不改画） */
-@media (prefers-color-scheme: dark){
-  #splash{background:#12161d}
-  #splash #sp-water{filter:brightness(.42) saturate(.75) contrast(1.05)}
-  #splash .sp-vig{background:linear-gradient(to bottom,
-    rgba(10,13,18,.55), rgba(10,13,18,.12) 22%, rgba(10,13,18,0) 40%,
-    rgba(10,13,18,0) 66%, rgba(10,13,18,.28) 86%, rgba(10,13,18,.62))}
-  #splash .sp-name{text-shadow:0 1px 3px rgba(0,0,0,.75), 0 2px 18px rgba(0,0,0,.55)}
-}
-@media (prefers-reduced-motion: reduce){
-  #splash .sp-leaf, #splash .sp-name{animation:none!important;opacity:1!important;transform:none!important}
-  #splash, #splash #sp-water, #splash .sp-vig{transition-duration:.2s}
-}
 
 /* ══ 出门 · 一趟趟的故事（0827）══════════════════════════════════════════
    数据契约照 nonchaiovo/journey-cards（MIT, commit b9a214c8）：一趟 journey ＋ 若干 stop。
@@ -2933,22 +2799,6 @@ input[type=range]::-moz-range-thumb{
 input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1px}
 
 </style>
-
-<!-- ══ 开屏 ══ 盖在 app 上的一层布，划开就揭掉（脚本在文件最后）。
-     放在 #app 前面：它是 fixed z-index:9999，谁先谁后都盖得住，
-     但写在前面浏览器会先解析到它，纸底能早一帧铺上。 -->
-<div id="splash">
-  <div id="sp-water" aria-hidden="true"></div>
-  <div class="sp-vig" aria-hidden="true"></div>
-  <div class="sp-mark">
-    <span class="sp-leaf">
-      <!-- Font Awesome Free 6 · canadian-maple-leaf · Icons CC BY 4.0 -->
-      <svg viewBox="0 0 512 512" aria-hidden="true"><path d="M383.8 351.7c2.5-2.5 105.2-92.4 105.2-92.4l-17.5-7.5c-10-4.9-7.4-11.5-5-17.4 2.4-7.6 20.1-67.3 20.1-67.3s-47.7 10-57.7 12.5c-7.5 2.4-10-2.5-12.5-7.5s-15-32.4-15-32.4-52.6 59.9-55.1 62.3c-10 7.5-20.1 0-17.6-10 0-10 27.6-129.6 27.6-129.6s-30.1 17.4-40.1 22.4c-7.5 5-12.6 5-17.6-5C293.5 72.3 255.9 0 255.9 0s-37.5 72.3-42.5 79.8c-5 10-10 10-17.6 5-10-5-40.1-22.4-40.1-22.4S183.3 182 183.3 192c2.5 10-7.5 17.5-17.6 10-2.5-2.5-55.1-62.3-55.1-62.3S98.1 167 95.6 172s-5 9.9-12.5 7.5C73 177 25.4 167 25.4 167s17.6 59.7 20.1 67.3c2.4 6 5 12.5-5 17.4L23 259.3s102.6 89.9 105.2 92.4c5.1 5 10 7.5 5.1 22.5-5.1 15-10.1 35.1-10.1 35.1s95.2-20.1 105.3-22.6c8.7-.9 18.3 2.5 18.3 12.5S241 512 241 512h30s-5.8-102.7-5.8-112.8 9.5-13.4 18.4-12.5c10 2.5 105.2 22.6 105.2 22.6s-5-20.1-10-35.1 0-17.5 5-22.5z"/></svg>
-    </span>
-    <div class="sp-name">连环</div>
-  </div>
-  <div class="sp-track" aria-hidden="true"><i class="sp-fill" id="sp-fill"></i></div>
-</div>
 
 <div class="app" id="app">
   <!-- ★ 底纸：0804 定的，底纸拿来当整屏的背景板——不再关在 748 的画布里，
@@ -3194,7 +3044,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
 <span style="position:relative;display:block;padding:16px 13px 0;text-align:left;z-index:3" data-body="">
 <span style="display:block;font-size:11px;letter-spacing:.2em;color:var(--hint)">PLAY</span>
 <b style="display:block;font-size:18px;font-weight:650;color:var(--ink);margin-top:4px">玩具厅</b>
-<i style="display:block;font-style:normal;font-size:13.5px;color:var(--sub);margin-top:2px;font-variant-numeric:tabular-nums">桌宠在里头</i>
+<i style="display:block;font-style:normal;font-size:13.5px;color:var(--sub);margin-top:2px;font-variant-numeric:tabular-nums">小玩意在里头</i>
 </span>
 </button>
 
@@ -3561,18 +3411,6 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
     </div>
   </div>
 
-  <!-- 桌宠的位置（素材不在这儿，见 core/web/pet/README.md）
-       ★ 0901：这儿原来内联着一张 3969 字节的 base64 完整动画 SVG，而紧挨着的注释
-         写的是「我们不发素材，只留位置」—— 说的和做的正好相反，
-         EXCLUDED.md 里也白纸黑字写着「素材一张都没有」。
-         那张图两层问题叠着：来自一个 AGPL-3.0 的粉丝项目（要按 AGPL 履约＋署名），
-         而角色本身是另一家公司的吉祥物（**商标，不是许可证能解决的**）。
-         自己机器上放着玩没问题，跟着开源分发不行。所以这儿真的空着了。
-       放了素材（/pet/*.svg）它就出现；一张都没放，这个位置不显示，界面照常。 -->
-  <div class="crab" id="crab" title="点我会跳" hidden>
-    <img src="" alt="" draggable="false">
-  </div>
-
   <!-- 底栏 -->
   <nav class="tabbar">
     <button class="tab" data-go="chat">
@@ -3896,41 +3734,6 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
             </div>
           </div></div>
 
-          <!-- ══ 开屏 · 枫叶水面（0810）══
-               0810 定的：小字全删（该知道的用户都知道了），滑杆照「漂浮物」那套 ——
-               杆子左边一个字标方向就够。河床的晃法整个下线：分层晃有台阶、整片晃卡，
-               所以钉死不晃，不给调（代码里的 sway 旋钮留着，地址栏还能试）。 -->
-          <div class="swrow">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M3 7h3l3 -3l3 3h3l3 -3"/><path d="M3 13h3l3 -3l3 3h3l3 -3"/><path d="M3 19h3l3 -3l3 3h3l3 -3"/></svg></div>
-              <span>开屏画质</span>
-            </div>
-            <div class="floatpick" id="wqpick">
-              <button data-wq="smooth">顺滑</button>
-              <button data-wq="balanced">均衡</button>
-              <button data-wq="fine">精细</button>
-            </div>
-          </div>
-          <div class="swrow">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M5 21c.5 -4.5 2.5 -8 7 -10"/><path d="M9 18c6.218 0 10.5 -3.288 11 -12c-5.494 0 -10.5 .5 -13 4c-2 3 -1 7 1 8"/></svg></div>
-              <span>枫叶</span>
-            </div>
-            <div class="floatpick" id="wppick">
-              <button data-wp="autumn">全谱</button>
-              <button data-wp="crimson">偏红</button>
-              <button data-wp="gold">偏金</button>
-            </div>
-            <div class="fltune">
-              <label>密<input type="range" id="wdens" min="8" max="90" step="2" value="48" aria-label="叶子密度"></label>
-              <label>急<input type="range" id="wwind" min="0" max="4" step="0.1" value="1.8" aria-label="风"></label>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0 2px 42px">
-              <small style="color:var(--hint);font-size:11.5px">改完下次开屏生效</small>
-              <button id="wpeek" style="flex:none;border:0;background:var(--maple-soft);color:var(--maple);
-                      border-radius:10px;min-height:34px;padding:0 14px;font-size:12.5px;font-family:inherit;cursor:pointer">现在看一眼</button>
-            </div>
-          </div>
           <!-- 日记本排法（0806）。0805 的注释里写了「设置 › 美化 › 日记本 里切」，
                但这一行当时没做出来 —— silkDiary() 只有定义没人调，等于切不过去。补上。 -->
           <div class="swrow">
@@ -3981,17 +3784,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
               <label>快<input type="range" id="floatspd" min="0.3" max="2.6" step="0.1" value="1" aria-label="漂浮物速度"></label>
             </div>
           </div>
-          <button class="setrow" data-sub="桌宠"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10l.01 0"/><path d="M15 10l.01 0"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/></svg></div><span>桌宠<small>多大只 · 演哪一出 · 12 个动作自己会动</small></span><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6l-6 6"/></svg></button>
-          <div class="swrow" style="border-bottom:0">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10l.01 0"/><path d="M15 10l.01 0"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/></svg></div>
-              <span>他多大只<small id="crabval">52 px</small></span>
-            </div>
-            <!-- 0806 要的：桌宠还要能更大，大小滑杆的范围再放宽→ 上限 96 放到 180。
-                 180 是画布宽的四成多，右下角摆得下，也不会顶到底栏（它 bottom 撑在 202px）。 -->
-            <input type="range" id="crabsize" min="34" max="180" step="2" value="52" aria-label="桌宠多大只">
-          </div>
-        </div>
+                  </div>
       </div>
 
       <div class="setgroup">
@@ -4545,7 +4338,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
     </div>
   </div>
 
-  <!-- 设置里那几个调参数的，共用这一页：名字头像 / 桌宠 / 通知与频率 / 音色调校。
+  <!-- 设置里那几个调参数的，共用这一页：名字头像 / 通知与频率 / 音色调校。
        DOM 只有一份，按点的是哪一项渲染。 -->
   <div class="sub" id="tunepage">
     <div class="top">
@@ -5067,7 +4860,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
 
 <script>
 /* ══════════════════ 外观偏好 · PREF ══════════════════
-   0805 验收时逮到的一整类毛病：个签在主页不生效、头像改不了、桌宠大小和漂浮物都不生效——
+   0805 验收时逮到的一整类毛病：个签在主页不生效、头像改不了、漂浮物大小也不生效——
    四处都是同一个病：**设置里改得动，但没人存、也没人在开页面的时候读回来**，一刷新全回默认。
 
    规矩：
@@ -5140,10 +4933,6 @@ const PREF = (function(){
       b.classList.toggle('on', b.dataset.go === key);
     });
     var inChat = (key === 'chat');
-    /* ★ 0820 要的：桌宠不止在聊天页出现，翻到哪一页（打电话也算）都看得见。
-       —— 设置里那颗开关开着就全家都在，关着还是只在聊天页。 */
-    window.__inChat = inChat;
-    if (window.applyCrabWhere) window.applyCrabWhere();
     document.getElementById('callbtn').style.display = inChat ? '' : 'none';
     /* 聊天页右上角＝聊天记录；离开聊天页换回设置 */
     document.getElementById('histbtn').style.display = inChat ? '' : 'none';
@@ -5248,58 +5037,6 @@ const PREF = (function(){
     ta.style.height = Math.min(ta.scrollHeight, 110) + 'px';
   });
 
-  /* 桌宠会跳 */
-  var crab = document.getElementById('crab');
-  /* 可拖动：他挡住话了就把桌宠拎走，放哪记哪。挪动 <7px 仍然算「点一下」（他会跳）。
-     抄的是原项目的旧皮肤:1586 那段（0717 写的），阈值和边界夹取照搬。 */
-  (function(){
-    var app = document.getElementById('app');
-    try {
-      var sv = JSON.parse(localStorage.getItem('lh.crabPos') || 'null');
-      if (sv && sv.l != null){
-        var b0 = app.getBoundingClientRect();
-        crab.style.left = Math.max(0, Math.min(sv.l, b0.width  - crab.offsetWidth))  + 'px';
-        crab.style.top  = Math.max(0, Math.min(sv.t, b0.height - crab.offsetHeight)) + 'px';
-        crab.style.right = 'auto'; crab.style.bottom = 'auto';
-      }
-    } catch(e){}
-    var drag = null;
-    crab.addEventListener('pointerdown', function(e){
-      try {
-        var r = crab.getBoundingClientRect(), b = app.getBoundingClientRect();
-        drag = {x:e.clientX, y:e.clientY, l:r.left-b.left, t:r.top-b.top, moved:false};
-        crab.setPointerCapture(e.pointerId); e.preventDefault();
-      } catch(e2){}
-    });
-    crab.addEventListener('pointermove', function(e){
-      if (!drag) return;
-      var dx = e.clientX-drag.x, dy = e.clientY-drag.y;
-      if (!drag.moved && (Math.abs(dx)>7 || Math.abs(dy)>7)){ drag.moved = true; crab.classList.add('dragging'); }
-      if (drag.moved){
-        var b = app.getBoundingClientRect();
-        crab.style.left = Math.max(0, Math.min(drag.l+dx, b.width  - crab.offsetWidth))  + 'px';
-        crab.style.top  = Math.max(0, Math.min(drag.t+dy, b.height - crab.offsetHeight)) + 'px';
-        crab.style.right = 'auto'; crab.style.bottom = 'auto';
-      }
-    });
-    crab.addEventListener('pointerup', function(){
-      if (!drag) return;
-      if (drag.moved){
-        crab.classList.remove('dragging');
-        try {
-          localStorage.setItem('lh.crabPos', JSON.stringify({
-            l: Math.round(parseFloat(crab.style.left) || 0),
-            t: Math.round(parseFloat(crab.style.top)  || 0)}));
-        } catch(e){}
-      } else {                                  /* 没挪动＝点了他一下 */
-        crab.classList.add('jump');
-        setTimeout(function(){ crab.classList.remove('jump'); }, 320);
-      }
-      drag = null;
-    });
-    crab.addEventListener('pointercancel', function(){ crab.classList.remove('dragging'); drag = null; });
-  })();
-
   /* ── 思考链 sheet：跟手拖，三档吸附 ──
      档位是 translateY 的百分比：0=拉满、40=一半、72=只露个头、100=关掉。
      只有头部可拖，正文照常滚，两者不打架。 */
@@ -5377,128 +5114,6 @@ const PREF = (function(){
   }
   shead.addEventListener('pointerup', endSheetDrag);
   shead.addEventListener('pointercancel', endSheetDrag);
-
-  /* 桌宠：多大只 ＋ 演哪一出。
-     ★ 0805 报的：大小不生效——拉的时候是生效的，刷新就回 52 了（没人存、没人读）。
-     ★ 十二个动作：`/pet/*.svg`，每张自带 CSS 动画（素材自己放，仓库里没有），
-       换 src 就换了一出戏。设置里两处（美化 › 桌宠、桌宠页）改的是同一份 PREF。 */
-  var cs = document.getElementById('crabsize');
-  var crabImg = crab.querySelector('img');
-  /* ★ 0901：原来这儿取的是页面里内联的那张图当「断线时的底」。素材撤走之后没有底了 ——
-     没放素材就让这个位置**整个不显示**（pet/README.md 承诺的就是这个），
-     放了素材第一次换姿势时再把它显出来。 */
-  var _pose0 = '';
-  /* ══ 跟着心情演（0806）══ 0805 那页小字写着「现在挑的是没事的时候演什么」，这是补上那一半。
-     ★ 用户挑的那个是**底色**，不是被顶掉：心情某一维够强才盖过去，平静下来就还回用户挑的那只。
-     ★ 数据白拿 —— 主页 loadHome() 本来就取了 mood，不另发请求。 */
-  var POSE_BY_MOOD = {
-    '开心':['happy', 'react-double-jump', 'headphones-groove'],
-    '骄傲':['react-double-jump', 'happy'],
-    '心软':['aegyo-shy', 'idle-living'],   '求宠':['aegyo-shy', 'react-double-jump'],
-    '心疼':['aegyo-shy', 'idle-living'],
-    '想念':['idle-look', 'idle-living', 'idle-yawn'],
-    '孤单':['idle-look', 'idle-yawn', 'sleeping'],
-    '担心':['idle-look', 'idle-bubble'],
-    '吃醋':['react-annoyed', 'aegyo-shy'], '委屈':['react-annoyed', 'aegyo-shy'],
-    '生气':['react-annoyed'],              '愧疚':['react-annoyed', 'idle-living'],
-  };
-  var _crabMood = null;
-  /* 45 是看真实数据定的：开心 73、想念 56、心软 12，再往下就都贴着 0 了。
-     门槛太低会变成「一整天都在演」，那反而看不出他什么时候真动了心。 */
-  var MOOD_GATE = 45;
-
-  /* ══ 跟着「他此刻在干嘛」演（0810）══
-     0810 定的：桌宠该跟着当下这件事演（在想／打字／用工具／搜索），
-     不能只跟长期心情走——那样它常年只演开心。
-
-     ★ 说得对，而且原因很具体：上面那套跟的是**长期心情**，
-       而用户那份数据里开心常年 73 分遥遥领先、门槛才 45 —— 所以他永远在演开心。
-       「此刻在干嘛」是另一路信号，走 SSE：stage/os＝在想，tool_live＝动手，s＝在说。
-     ★ 优先级：**动作 > 心情 > 用户挑的那只**。动作是此刻的真事，最该被看见；
-       但「自动」关掉时一律听用户的，那是用户明确要固定一只的意思。 */
-  /* ★ 0820 定的：素材里表情很多，同一件事该随机换着出。
-     ——所以一件事对一**摞**表情，每次进这个状态随机挑一张。
-     十二张都用上了（原来只用了四张，看着当然只会开心）。 */
-  var ACT_POSE = {
-    think: ['idle-bubble', 'idle-look', 'idle-living'],        /* 在想：冒泡泡 / 张望 / 发呆 */
-    tool:  ['idle-look', 'idle-bubble', 'working-typing'],     /* 动手翻东西 */
-    talk:  ['working-typing', 'happy', 'headphones-groove'],   /* 在说 */
-    call:  ['headphones-groove', 'happy', 'idle-living'],      /* 打电话：戴着耳机晃 */
-    listen:['idle-look', 'headphones-groove']                  /* 电话里在听对方说 */
-  };
-  /* 随机挑一张，但**别连着两次挑到同一张** —— 同一张连播两次就看不出他换了心情 */
-  var _lastPick = {};
-  function pick(key, arr){
-    if (!arr || !arr.length) return null;
-    if (arr.length === 1) return arr[0];
-    var pool = arr.filter(function(x){ return x !== _lastPick[key]; });
-    var got = pool[Math.floor(Math.random() * pool.length)] || arr[0];
-    _lastPick[key] = got;
-    return got;
-  }
-  var _crabAct = null;
-
-  function poseNow(){
-    var picked = PREF.get('crabPose', null);
-    var auto = PREF.get('crabAuto', true);
-    if (!auto) return picked;                              /* 要固定一只，谁都别抢 */
-    if (_crabAct && ACT_POSE[_crabAct]) return pick('act:' + _crabAct, ACT_POSE[_crabAct]);   /* 此刻在干嘛，最优先 */
-    if (!_crabMood) return picked;
-    var top = null, v = -1;
-    Object.keys(_crabMood).forEach(function(k){
-      var x = +_crabMood[k] || 0;
-      if (x > v){ v = x; top = k; }
-    });
-    if (top && v >= MOOD_GATE && POSE_BY_MOOD[top]) return pick('mood:' + top, POSE_BY_MOOD[top]);
-    return picked;                      /* 没什么特别的 —— 演用户挑的那只 */
-  }
-  /* 主页取完数喊一声，心情变了桌宠跟着变 */
-  window.crabMood = function(m){ _crabMood = m || null; applyCrab(); };
-  /* 聊天那边每收到一类事件喊一声：'think' / 'tool' / 'talk' / null（说完了，回到原样） */
-  window.crabAct = function(a){
-    if (_crabAct === a) return;         /* 同一态别反复重设 src，不然动画会一直从头播 */
-    _crabAct = a || null;
-    applyCrab();
-  };
-
-  function applyCrab(){
-    var v = +PREF.get('crabSize', 52);
-    crab.style.width = crab.style.height = v + 'px';
-    if (cs) cs.value = v;
-    var cv = document.getElementById('crabval');
-    if (cv) cv.textContent = v + ' px';
-    var pose = poseNow();
-    if (crabImg){
-      var want = pose ? ('/pet/' + pose + '.svg') : _pose0;
-      if (crabImg.getAttribute('src') !== want){ crabImg.setAttribute('src', want); }
-      crab.hidden = false;          /* 有素材了才让它出来 */
-    }
-    var tz = document.getElementById('cz'), tzv = document.getElementById('czv');
-    if (tz && document.activeElement !== tz){ tz.value = v; if (tzv) tzv.textContent = v; }
-  }
-  cs.addEventListener('input', function(){
-    PREF.set('crabSize', +cs.value);
-    applyCrab();
-  });
-  applyCrab();
-  PREF.onload(applyCrab);
-  window.applyCrabPref = applyCrab;
-  /* ★ 0820 全家可见：开着＝哪一页都在（打电话那一层盖在上面，所以它得往上抬）。
-     位置是用户自己拖的那个，各页共用。 */
-  window.applyCrabWhere = function(){
-    var all = PREF.get('crabEverywhere', false);
-    var onCall = document.getElementById('callhost');
-    onCall = onCall && onCall.classList.contains('on');
-    crab.style.display = (window.__inChat || all) ? '' : 'none';
-    crab.style.zIndex = (all && onCall) ? '65' : '';     /* 通话那一层是 64 */
-  };
-  window.applyCrabWhere();
-  /* 挑的那张万一取不回来（断网、文件没了），退回页面里内联那只，别留个破图 */
-  if (crabImg) crabImg.addEventListener('error', function(){
-    /* 没有内联底图了：断线就把它收回去，别留一个坏掉的 <img> 在那儿 */
-    if (!_pose0){ crab.hidden = true; crabImg.removeAttribute('src'); return; }
-    if (crabImg.getAttribute('src') !== _pose0) crabImg.setAttribute('src', _pose0);
-  });
 
   /* ══ 那颗星 · 逐帧（0820）══ 五个字符来回走，1.2 秒一轮，跟 Claude Code 里那颗同一个节奏。
      只在状态行露脸的时候才转，藏起来就停 —— 不留一个后台定时器空转。 */
@@ -8064,8 +7679,6 @@ function homeCells(d){
     const m = d.mood.mood || {};
     const top = Object.keys(m).sort((a, b) => m[b] - m[a])[0];
     C.mood = {main: '我的心情', sub: d.mood.desc + (top ? '（' + top + ' ' + Math.round(m[top]) + '）' : '')};
-    /* 桌上那只桌宠也吃这一份（0806）—— 它演的就该是我此刻的样子，不用另发一次请求 */
-    if (window.crabMood) window.crabMood(m);
   }
 
   if (d.letters.length){
@@ -10210,7 +9823,7 @@ async function loadMem(){
   function hotOf(a, light){ return light ? shade(a, -0.42) : punch(a); }
 
   /* ★ 配色是反着来的（0827 定的）：**整团字符是枫叶红**，不是灰 ——
-     这样桌宠和枫叶这两个剪影本身就带着原项目的身份，而不是一团中性的灰。
+     这样剪影本身就带着原项目的身份，而不是一团中性的灰。
      那高亮怎么办？这个问题是设计时自己问出来的：一片红里再用红，只靠浓度和大小分层，
      一千个字里挑七个不够看（实测过）。所以**高亮换成墨** —— 红纸上落笔。
      没引入第三个颜色：--maple 和 --ink 都是原项目现成的，只是角色对调了。
@@ -12185,7 +11798,7 @@ window.haptic = haptic;
 })();
 
 /* ══ 设置 · 调参数那四样 ══
-   名字头像 / 桌宠（黏人度）/ 通知与频率 / 音色调校，共用一个页面。
+   名字头像 / 通知与频率 / 音色调校，共用一个页面。
    ★ 滑钮松手就存，输入框按「存下来」才存 —— 写操作一律用户自己动手，我只摆按钮。 */
 (function(){
   const page  = document.getElementById('tunepage');
@@ -12203,15 +11816,6 @@ window.haptic = haptic;
     '<label class="fldlb">' + label + '</label>'
     + '<input class="fld" id="' + id + '" value="' + W.esc(val || '') + '" autocomplete="off"/>';
 
-  /* 桌宠的十二个动作（`pet/*.svg`）。★ 仓库里**没有**素材，自己放进去就会出现。
-     每一只 SVG 自带 CSS 动画，放进 <img> 就自己动 —— 这个动效值得让人挑得着。 */
-  const CRAB_POSES = [
-    ['idle-look', '东张西望'], ['idle-living', '过日子'], ['idle-bubble', '吐泡泡'],
-    ['idle-yawn', '打哈欠'], ['happy', '高兴'], ['aegyo-shy', '害羞'],
-    ['react-double-jump', '蹦两下'], ['react-annoyed', '不高兴'],
-    ['headphones-groove', '戴耳机摇'], ['working-typing', '在敲键盘'],
-    ['wake', '刚醒'], ['sleeping', '睡了'],
-  ];
   /* λ 换成人话：多久没说话，我想你的机会到一半。t½ = ln2/λ */
   /* 0807：耳语滑钮＝总闸的开度。把 0–100 翻成「一天最多几句」，
      公式跟后端 wake_gate.daily_max 一模一样（level/100 × 9，9 是 08-02 的历史峰值）。
@@ -12357,63 +11961,8 @@ window.haptic = haptic;
         say(ok ? '改好了' : '没存上，再按一下？');
       };
     },
-    /* ★ 0805 拍的板：**频率全收录到一页**，桌宠页只管桌宠自己。
-         0805 报的两条：想念骰子没有旋钮、桌宠页里放的却是黏人度——
-         黏人度管的是多久主动凑过去一次，那是频率，跟桌宠长多大没关系，摆错地方了。 */
-    '桌宠': async function(){
-      hint.textContent = '桌上那只小家伙 —— 多大只、演哪一出';
-      const cur = PREF.get('crabPose', 'idle-look');
-      body.innerHTML = slider('cz', '多大只', +PREF.get('crabSize', 52), 34, 180, 2,
-          '拉的时候右下角那只当场跟着变。拉到头是 180，比原来那档大了快一倍。')
-        + '<div class="tuner"><div class="lb"><span>演哪一出</span></div>'
-        + '<div class="posegrid" id="posegrid">'
-        + CRAB_POSES.map(p =>
-            '<button class="pose' + (p[0] === cur ? ' on' : '') + '" data-pose="' + p[0] + '">'
-            + '<img src="/pet/' + p[0] + '.svg" alt="" loading="lazy">'
-            + '<span>' + p[1] + '</span></button>').join('')
-        + '</div>'
-        + '<small>这十二张是同一只的十二个动作，每一张自己会动 —— '
-        + '挑一个当它的常态。开着下面那个开关时，这儿挑的是「我没什么心情波动的时候演什么」。</small></div>'
-        /* 0806 接上了心情。0805 那句「真接上心情之后」的欠条，今天还了。 */
-        + '<div class="tuner"><div class="sw">'   /* .tuner .sw ＝设置里那种「左边一句话右边一个开关」的行 */
-        + '<span>跟着我的心情演<small>某一格够高它就换 —— 开心了蹦，想你了张望，闹别扭了背过身去</small></span>'
-        + '<input type="checkbox" id="crabauto"' + (PREF.get('crabAuto', true) ? ' checked' : '') + '/>'
-        + '</div><small>关掉就一直演你上面挑的那只。它读的是同一份心情数据，跟「我的心情」那一页一致。'
-        + '同一件事我会在几只里随机挑一只演，不会老是同一张脸。</small></div>'
-        /* ★ 0820 要的：桌宠不止在聊天页出现，翻到哪一页（打电话也算）都看得见。 */
-        + '<div class="tuner"><div class="sw">'
-        + '<span>全家都能看见它<small>不只聊天页 —— 记事、记忆、书房、打电话，走到哪它跟到哪</small></span>'
-        + '<input type="checkbox" id="craball"' + (PREF.get('crabEverywhere', false) ? ' checked' : '') + '/>'
-        + '</div><small>它待的位置是你自己拖的那个，各页共用同一个位置。挡住话了就把它拎走。</small></div>';
-      /* 大小：滑杆归 PREF 管（跟设置 › 美化那根是同一个键，两处同步） */
-      const cz = document.getElementById('cz'), czv = document.getElementById('czv');
-      cz.addEventListener('input', function(){
-        if (czv) czv.textContent = cz.value;
-        PREF.set('crabSize', +cz.value);
-        if (window.applyCrabPref) window.applyCrabPref();
-      });
-      /* 全家可见（0820） */
-      const cl = document.getElementById('craball');
-      if (cl) cl.addEventListener('change', function(){
-        PREF.set('crabEverywhere', cl.checked);
-        if (window.applyCrabWhere) window.applyCrabWhere();
-        say(cl.checked ? '好，我让它跟着你走' : '那它就还待在聊天页');
-      });
-      /* 跟着心情演的开关（0806） */
-      const ca = document.getElementById('crabauto');
-      if (ca) ca.addEventListener('change', function(){
-        PREF.set('crabAuto', ca.checked);
-        if (window.applyCrabPref) window.applyCrabPref();
-        say(ca.checked ? '好，我心里怎么样它就怎么演' : '那它就一直演你挑的那只');
-      });
-      document.getElementById('posegrid').addEventListener('click', function(e){
-        const b = e.target.closest('.pose'); if (!b) return;
-        this.querySelectorAll('.pose').forEach(x => x.classList.toggle('on', x === b));
-        PREF.set('crabPose', b.dataset.pose);
-        if (window.applyCrabPref) window.applyCrabPref();
-        say('换成「' + b.querySelector('span').textContent + '」了');
-      });
-    },
+    /* ★ 0805 拍的板：**频率全收录到一页**。
+         0805 报的：想念骰子没有旋钮，而要频率的旋钮却被摆到了别的地方去。 */
     /* 0807：把 0–100 翻译成「一天最多几句」。上限 9 是历史峰值（08-02 那天就说了 9 句），
        跟后端 wake_gate.daily_max 那条公式必须一致 —— 两边不一样用户就不信这个数了。 */
     '通知与频率': async function(){
@@ -12636,7 +12185,7 @@ window.haptic = haptic;
 
   document.addEventListener('click', function(e){
     const b = e.target.closest && e.target.closest(
-      '[data-sub="名字 / 头像"], [data-sub="桌宠"], [data-sub="通知与频率"], [data-sub="音色调校"], '
+      '[data-sub="名字 / 头像"], [data-sub="通知与频率"], [data-sub="音色调校"], '
     + '[data-sub="日常补一句"]');
     if (!b || twoStep(b)) return;
     e.stopPropagation(); e.preventDefault();
@@ -13473,21 +13022,15 @@ window.haptic = haptic;
   function expand(){
     host.classList.add('on', 'live');
     pill.hidden = true;
-    /* 打电话时桌宠也换一出（戴耳机晃那几只），顺手把它抬到通话层上面 */
-    if (window.crabAct) window.crabAct('call');
-    if (window.applyCrabWhere) window.applyCrabWhere();
   }
   function shrink(){
     host.classList.remove('on');          /* 只是推出去，iframe 照旧活着 */
-    if (window.applyCrabWhere) window.applyCrabWhere();
     /* 真在通话中才留那条「通话中」；还没拨、或者已经挂了，就整个收掉 */
     if (live && phase !== 'idle' && phase !== 'ended'){ pill.hidden = false; return; }
     done();
   }
   function done(){
     live = false; replaying = false;
-    if (window.crabAct) window.crabAct(null);
-    if (window.applyCrabWhere) setTimeout(window.applyCrabWhere, 60);
     if (tick){ clearInterval(tick); tick = 0; }
     pill.hidden = true;
     host.classList.remove('on', 'live');
@@ -14132,32 +13675,6 @@ window.haptic = haptic;
           setTimeout(pull, 2500);
         }
         break;
-    }
-  });
-
-  /* ══ 桌宠跟着「他此刻在干嘛」演（0810）══
-     0810 定的：桌宠要跟着当下这件事演（在想／打字／搜索／用工具），
-     不能只跟长期心情走——那样它常年只演开心。
-
-     ★ 单独订一份，不去动上面那个 switch —— 那条链路是聊天的命，
-       加装饰不该冒把它弄坏的风险。
-     ★ 三态各配一只姿势（映射在桌宠那段的 ACT_POSE 里）：
-         think 在想（送出去了／到他那了／翻记忆）→ idle-bubble 冒泡泡
-         tool  动手翻东西                        → idle-look   张望着找
-         talk  在说（想好了在写／正在吐字）      → working-typing 打字
-       说完（end / stop）交回 null，退回原来那套：长期心情 → 用户挑的那只。 */
-  CHAT.on(function(type, d){
-    if (!window.crabAct) return;
-    switch (type){
-      case 'sent': case 'sending': case 'recv': case 'stage': case 'resume':
-        window.crabAct('think'); break;
-      case 'tool':
-        /* d.done 是工具跑完的那一声 —— 收工了就回到「在想」，别一直张望 */
-        window.crabAct(d && d.done ? 'think' : 'tool'); break;
-      case 'os': case 'say':
-        window.crabAct('talk'); break;
-      case 'end': case 'stop': case 'room':
-        window.crabAct(null); break;
     }
   });
 
@@ -15827,7 +15344,7 @@ async function loadHome(){
     return ME;
   };
 
-  /* 开页面就读一次：偏好（皮肤/漂浮物/桌宠/风…）和身份一起。
+  /* 开页面就读一次：偏好（皮肤/漂浮物/风…）和身份一起。
      两个都不阻塞渲染 —— 本机那份先顶上，网络回来了再校正。 */
   function boot(){ PREF.pull(); window.loadIdentity(); }
   if (document.readyState === 'complete') setTimeout(boot, 0);
@@ -17605,291 +17122,6 @@ async function loadHome(){
 
   /* iOS 从 bfcache 把这一页恢复回来时，前面那些哨兵不一定还算数 —— 回来先补满 */
   window.addEventListener('pageshow', function(e){ if (e.persisted) pinTo(DEPTH); });
-})();
-</script>
-
-<script>
-/* ══ 开屏控制（0810）══
-   划开 → 大波浪 → 慢慢化开 → 揭掉。整个开屏只有这一个交互，
-   所以底下不需要「滑动推开落叶」那行提示，水自己会说。
-
-   ★ 三条兜底，任何一条都保证用户进得来：
-     1. p5 / maple-water 加载失败 → 退回纯纸底，碰一下就进
-     2. 水面压根没起来 → 3.2s 自己走
-     3. scene 建失败抛异常 → 同上
-   ★ 揭掉时 destroy()，把 rAF 一起收走，别在主页背后空转烧电。 */
-(function(){
-  var EL = document.getElementById('splash');
-  if (!EL) return;
-
-  /* ★ 0813 实测报的：点左上角的返回箭头，有时会退回开屏那一屏，而不是上一页。
-     查过那条链：navBack() 只在所有二级页关完之后切主 tab，它够不着开屏；
-     而开屏揭掉时是整块 removeChild 的，返回键根本没有它可回。
-     真凶是 **PWA 被系统挂起之后整页重新 load** —— 用户按箭头那一瞬间页面正在恢复，
-     开屏当然从头再放一遍。用户感觉是箭头干的，其实是恢复干的。
-     挡法：放过一次就在 sessionStorage 记个时间，同一次会话里三十分钟内再 load 直接跳过水面。
-     ⚠ sessionStorage 跟着这个标签页的会话走 —— 真正退出 app 重新打开，它是空的，
-       水面照放。所以用户自己想看的那次一次都不会少。 */
-  var SP_SEEN = 'sp_seen_at', SP_GRACE = 30 * 60 * 1000;
-  try {
-    var _last = +(sessionStorage.getItem(SP_SEEN) || 0);
-    if (_last && Date.now() - _last < SP_GRACE){
-      if (EL.parentNode) EL.parentNode.removeChild(EL);
-      return;
-    }
-  } catch(e){}
-
-  var HOST = document.getElementById('sp-water');
-
-  var HOLD_MS = 420;    /* 波浪炸开后按住不动，让它铺开 */
-  var FADE_MS = 1100;   /* 「慢慢消失」就是这一段 */
-  var DEAD_MS = 3200;   /* 水面没起来时的兜底 */
-
-  var closed = false, scene = null, alive = false;
-
-  function close(){
-    if (closed) return; closed = true;
-    /* 揭掉的这一刻记一笔，恢复时靠它跳过（见上面 SP_SEEN 那段） */
-    try { sessionStorage.setItem(SP_SEEN, String(Date.now())); } catch(e){}
-    EL.style.transitionDuration = FADE_MS + 'ms';
-    EL.classList.add('sp-gone');
-    setTimeout(function(){
-      try { if (scene && scene.destroy) scene.destroy(); } catch(e){}
-      if (EL.parentNode) EL.parentNode.removeChild(EL);
-    }, FADE_MS + 120);
-  }
-
-  /* 划到头：水面自己已经放了那朵大水花（amp 6 / r 40）并把浮叶全甩开，
-     我们只管等它铺开，再开始化。 */
-  function onUnlocked(u){ if (u && !closed) setTimeout(close, HOLD_MS); }
-
-  /* 滑动进度：每一个指针帧都会来一次，所以直接写 style，不经过任何状态。
-     松手不到 100% 时水面自己以 1.7/s 回弹，这里会跟着退回去 —— 想玩就一直玩。 */
-  var FILL = document.getElementById('sp-fill');
-  function onProgressed(v){ if (FILL) FILL.style.transform = 'scaleX(' + v + ')'; }
-
-  /* 水面没起来就退回「碰一下就进」，再不行到点自己走 */
-  setTimeout(function(){
-    if (closed || alive) return;
-    EL.addEventListener('pointerup', close, {passive:true});
-    setTimeout(function(){ if (!closed) close(); }, DEAD_MS);
-  }, 2600);
-
-  /* ★ 0831（GPT 三轮 P0-05）：上面那道兜底**只在水面没起来时**装 ——
-     水面起来了(alive=true)之后再崩（p5 运行时抛错），人就被锁在开屏外面，
-     怎么划都进不去，也没有任何出口。开屏绝不该有把人关在门外的可能。
-     两条新的保险，都不打扰正常玩水的人： */
-  function escapeHatch(why){
-    if (closed || EL._hatch) return;
-    EL._hatch = 1;
-    console.warn('[开屏] 给出口：', why);
-    var b = document.createElement('button');
-    b.textContent = '直接进去 ›';
-    b.style.cssText = 'position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));'
-      + 'z-index:5;border:0;border-radius:999px;padding:10px 16px;font-family:inherit;'
-      + 'font-size:13.5px;background:rgba(0,0,0,.42);color:#fff;backdrop-filter:blur(6px)';
-    b.addEventListener('click', function(e){ e.stopPropagation(); close(); });
-    EL.appendChild(b);
-  }
-  /* ① 开屏还开着时页面抛了未捕获错误 —— 多半就是水面崩了，立刻给出口 */
-  window.addEventListener('error', function(e){
-    if (closed) return;
-    var f = String((e && e.filename) || '');
-    if (f.indexOf('maple-water') >= 0 || f.indexOf('p5') >= 0 || alive) escapeHatch('运行时报错');
-  });
-  window.addEventListener('unhandledrejection', function(){ if (!closed) escapeHatch('未处理的 promise'); });
-  /* ② 兜到底：开屏开了这么久还没进去，不管什么原因，先把出口摆出来。
-        （只是多一颗按钮，滑动解锁照玩，不自动关。） */
-  setTimeout(function(){ escapeHatch('开屏停留太久'); }, 9000);
-
-  var saved = {};
-  try { saved = JSON.parse(localStorage.getItem('lh.water') || '{}') || {}; } catch(e){}
-
-  /* 出厂值是照横屏桌面调的（density 78）。竖屏手机上同一片河床铺在更窄更高的画布里，
-     看着比原版还满，所以窄屏默认降到 48。想要密的，设置里推回去。 */
-  var narrow = Math.min(innerWidth, innerHeight) < 520;
-  var reduce = false;
-  try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
-
-  var opts = {
-    density: narrow ? 48 : 78,
-    fall:    narrow ? 1.6 : 2.4,
-    ripple:  1.1,
-    wind:    1.8,
-    windDirection: 'down',
-    palette: 'autumn',
-    paper:   3,
-    /* ★ 0810 在 iPhone 上报的卡顿。真凶是每帧的两处开销，跟这几项有没有做成可调无关：
-         · 波场：GW=W/grid 的格子，stepField ＋ renderField 每帧各走一遍全部格子
-         · 像素填充：pixelDensity
-       窄屏换顺滑档（实测 375×812）：格子 17,177→8,505（少 50.5%）、
-       像素 684,516→304,500（少 55.5%）。grid 只让水纹粗一点，叶子和构图一点不动。 */
-    grid:    narrow ? 6   : 4.2,
-    sharp:   narrow ? 1   : 1.5,
-    /* 河床是一带一带画的、每带一个常量水平偏移，所以画面里有 H/band 条台阶随时间左右挪
-       （0810 报的几行随机左右抽动就是它）。band 调小台阶就细，而且代价很小 ——
-       这是 GPU 的位图块拷贝，比波场那个纯 JS 循环便宜得多。 */
-    band:    narrow ? 5   : 6,
-    /* ★ 0810 定案：河床钉死不晃，也不给调。
-       三档都试过了 —— banded 分层晃有台阶（「几行在抽」就是层与层之间跳的，
-       只有手机看得见：3 倍屏 ＋ sharp:1，一像素的偏移被拉成三像素宽的锯齿）；
-       whole 整片晃实测反馈卡（每帧只画 1 次，理论上更省，但用户眼睛是裁判）。
-       所以剩下 off：河床不动，水的活儿全交给波场涟漪和浮着的叶子。
-       设置里那一行已经撤掉，旋钮留在代码里，地址栏还能试：?water=sway:banded */
-    sway:    'off',
-    /* 滑多远算到底（屏幕宽度的几成）。原来写死 0.62，实测反馈划的距离偏长。 */
-    reach:   0.45,
-    onUnlock: onUnlocked,
-    onProgress: onProgressed
-  };
-  if (reduce) { opts.fall = 0; opts.wind = 0.3; opts.ripple = 0.6; }
-
-  /* ★ 0810 修：sway 这一项已经从设置页下线了，但用户之前手动点过「整片晃」，
-     那个值还躺在 localStorage 里 —— 而合并顺序是「默认 → localStorage 覆盖」，
-     所以我把默认改成 off 根本盖不过它，用户看到的还是整块左右抽，
-     而且设置里那一行已经删了，用户连改回来的地方都没有。
-     → 已下线的项一律不认存档，并且**顺手把它从存档里清掉**，别让它一直躺着。
-       想试仍然可以走地址栏：?water=sway:banded （下面 URL 那段在这之后跑）。 */
-  if (saved.sway != null) {
-    delete saved.sway;
-    try { localStorage.setItem('lh.water', JSON.stringify(saved)); } catch (e) {}
-  }
-  for (var k in saved) if (saved[k] != null) opts[k] = saved[k];
-
-  /* ★ 手机上没有控制台，改不了 localStorage —— 给用户一个地址栏就能试的入口：
-       example.com/?water=grid:7,sharp:1,density:36
-     数字键按数字改，palette / windDirection 按字符串改。试到舒服为止，
-     再把那一组写进设置（设置页还没做，先用这个）。 */
-  try {
-    var q = (location.search.match(/[?&]water=([^&]+)/) || [])[1];
-    if (q) decodeURIComponent(q).split(',').forEach(function(pair){
-      var kv = pair.split(':'); if (kv.length !== 2) return;
-      var key = kv[0].trim(), val = kv[1].trim();
-      if (!(key in opts)) return;                 /* 只认真实存在的旋钮 */
-      opts[key] = isNaN(+val) ? val : +val;
-    });
-  } catch (e) {}
-
-  function load(src){
-    return new Promise(function(res, rej){
-      var s = document.createElement('script');
-      s.src = src; s.async = true;
-      s.onload = res; s.onerror = function(){ rej(new Error('load fail: ' + src)); };
-      document.head.appendChild(s);
-    });
-  }
-
-  /* p5 先、maple-water 后，顺序不能乱，所以串着加载，不靠 async 属性碰运气。
-     ⚠ 这一页的 URL 是 /，相对路径会解析错 —— 绝对路径优先。 */
-  /* ★ 静态 js 一旦被 CDN 缓存，改了文件公网拿到的还是旧版
-       （实测 cf-cache-status: HIT、max-age=14400，改完文件公网拿到的还是旧版，
-        而且客户端发 no-cache 头 CF 根本不理）。
-     → 用**内容指纹**当版本号：改了 maple-water.js 就把 MW_V 换成新的 md5 前 8 位，
-       URL 一变 CF 就当新资源回源。p5 是固定版本、永远不变，反而该让它一直被缓存。 */
-  var MW_V = 'd84b9a8b';
-  load('/vendor/p5-1.9.4.min.js')
-    /* 固定版本随仓库发行，CI / 浏览器版构建都核 SHA-256；挂了仍走纯纸底降级 */
-    .then(function(){
-      /* ★ 0830 挪进积木层了（`blocks/water/`）—— **一份源码，内核和积木共用**。
-           各存一份迟早会漂移，到时候「只拿走积木」的人和用整个应用的人看到的是两套东西。 */
-      return load('/blocks/water/maple-water.js?v=' + MW_V);
-    })
-    .then(function(){
-      if (closed) return;
-      if (!window.MapleWater) throw new Error('MapleWater missing');
-      scene = MapleWater(HOST, opts);
-      alive = true;
-      EL.classList.add('sp-lit');
-      HOST.classList.add('sp-on');
-      window.__splash = { scene: scene, close: close };   /* 调试用把手 */
-    })
-    .catch(function(err){
-      console.warn('[开屏] 水面没起来，走纯纸底：', err && err.message);
-    });
-})();
-</script>
-
-<script>
-/* ══ 设置 › 开屏水面（0810）══
-   把七个技术旋钮收成四样用户看得懂的：画质三档 / 配色三档 / 叶子多少 / 风。
-   存 localStorage『huan.water』，开屏启动时读（那段在上面）。
-   ★ 性能三项（grid·sharp·band）不单独暴露 —— 它们只有「更快还是更细」一个方向，
-     分开给等于逼用户理解波场网格。打成三档，卡就往左。 */
-(function(){
-  var KEY = 'lh.water';
-  var QUALITY = {
-    /* grid 越大波场格子越少（开销按平方掉）；band 越小河床台阶越细（治抽动，代价很小）；
-       sharp 是渲染分辨率上限。实测 375×812：顺滑档比精细档少约七成每帧运算。 */
-    smooth:   { grid: 7.5, sharp: 1,   band: 4 },
-    balanced: { grid: 6,   sharp: 1,   band: 5 },
-    fine:     { grid: 4.2, sharp: 1.5, band: 6 }
-  };
-
-  function read(){ try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ return {}; } }
-  function write(patch){
-    var o = read();
-    for (var k in patch) o[k] = patch[k];
-    try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e){}
-    return o;
-  }
-  /* 从存下来的 grid 反推现在是哪一档；没存过 = 跟随默认（窄屏均衡、宽屏精细） */
-  function currentQ(o){
-    if (o.grid == null) return (Math.min(innerWidth, innerHeight) < 520) ? 'balanced' : 'fine';
-    var best = 'balanced', d = 1e9;
-    for (var k in QUALITY){ var dd = Math.abs(QUALITY[k].grid - o.grid); if (dd < d){ d = dd; best = k; } }
-    return best;
-  }
-
-  var qp = document.getElementById('wqpick'),
-      pp = document.getElementById('wppick'),
-      sp = document.getElementById('wspick'),
-      dn = document.getElementById('wdens'),
-      wd = document.getElementById('wwind'),
-      pk = document.getElementById('wpeek');
-  if (!qp || !pp || !dn || !wd) return;
-
-  function paint(){
-    var o = read(), q = currentQ(o);
-    [].forEach.call(qp.querySelectorAll('button'), function(b){
-      b.classList.toggle('on', b.getAttribute('data-wq') === q);
-    });
-    var pal = o.palette || 'autumn';
-    [].forEach.call(pp.querySelectorAll('button'), function(b){
-      b.classList.toggle('on', b.getAttribute('data-wp') === pal);
-    });
-    if (sp){
-      var sw = o.sway || 'banded';
-      [].forEach.call(sp.querySelectorAll('button'), function(b){
-        b.classList.toggle('on', b.getAttribute('data-ws') === sw);
-      });
-    }
-    /* 密度没设过时显示的是开屏实际会用的默认值，别让滑块骗用户 */
-    dn.value = (o.density != null) ? o.density : (Math.min(innerWidth, innerHeight) < 520 ? 48 : 78);
-    wd.value = (o.wind != null) ? o.wind : 1.8;
-  }
-
-  qp.addEventListener('click', function(e){
-    var b = e.target.closest('[data-wq]'); if (!b) return;
-    write(QUALITY[b.getAttribute('data-wq')] || QUALITY.balanced);
-    paint();
-  });
-  pp.addEventListener('click', function(e){
-    var b = e.target.closest('[data-wp]'); if (!b) return;
-    write({ palette: b.getAttribute('data-wp') });
-    paint();
-  });
-  if (sp) sp.addEventListener('click', function(e){
-    var b = e.target.closest('[data-ws]'); if (!b) return;
-    write({ sway: b.getAttribute('data-ws') });
-    paint();
-  });
-  /* input 跟手写：这两个不像 density 那样要重建，写进去就完事，下次开屏读 */
-  dn.addEventListener('input', function(){ write({ density: +dn.value }); });
-  wd.addEventListener('input', function(){ write({ wind: +wd.value }); });
-
-  if (pk) pk.addEventListener('click', function(){ location.reload(); });
-
-  paint();
 })();
 </script>
 

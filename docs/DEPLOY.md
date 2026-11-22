@@ -37,7 +37,7 @@ key 就在这个源的 IndexedDB 里，所以这个源上不能有别人的脚�
 
 ## iOS · 加到主屏
 
-1. 起服务：`python -m core.server --lan`（会提醒你风险）
+1. 起服务：`PORT=8601 ./start.command --lan`（会提醒你风险）
 2. iPhone 用 **Safari** 打开那个地址（Chrome 加不了主屏）
 3. 分享 → 加到主屏幕
 
@@ -77,6 +77,15 @@ TWA 里的 WebView 跟浏览器一样不适合放 key。要在安卓上直连模
 别放 localStorage、别打进 apk 资源。
 
 反编译一个 apk 是几分钟的事。
+
+## 本机跑的时候：别用 8420
+
+`8420` 是**安卓完整体 APK 自己的后端端口**（写死在 `android-full` 的 Java 里）。
+本机这份占着 8420、再把 APK 打开，APK 会连到本机这一份 —— 你看到的是这里的页面，
+说的话也存进这里的 `data/lianhuan.db`，APK 沙箱里那份一个字不动。
+它不报错，只是看起来像成功了。所以 `start.command` 默认 8601，硬要 8420 它先拦一下。
+
+完整的表、自查命令、和四道已经堵上的口子：[PORT.md](PORT.md)。
 
 ## 自己的服务器
 

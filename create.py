@@ -62,12 +62,6 @@ BLOCKS = [
                                                               "无。零依赖", ["blocks/health"]),
 ]
 
-PETS = [
-    ("none",  "不要桌宠", "默认。以后想加，设置里还有入口"),
-    ("crab",  "要只螃蟹", "★ 我们不发素材，只指路。装完 NEXT-STEPS.md 里会写去哪拿"),
-    ("mine",  "我自己画", "装完 NEXT-STEPS.md 里给你命名规则。GIF、SVG 随便传"),
-]
-
 ENGINES = [
     ("echo", "先不接（回声）", "什么都不要。先看看界面长什么样"),
     ("cli",  "本机 CLI",       "本机装了官方 CLI 并登录过。**不用 API key**，走你自己的订阅"),
@@ -139,10 +133,9 @@ def main():
         dest = Path(a.dest or (input("\n  装到哪儿？[./my-home] ").strip() if not a.yes else "") or "./my-home").resolve()
 
     if a.yes:
-        blocks, pet, engine, store = ["paper", "physics", "parts"], "none", "echo", "sqlite"
+        blocks, engine, store = ["paper", "physics", "parts"], "echo", "sqlite"
     else:
         blocks = ask_many("要哪些前端积木？（不装也能用，聊天和记忆是自带的）", BLOCKS)
-        pet    = ask_one("桌宠？", PETS)
         engine = ask_one("用哪个引擎跟模型说话？", ENGINES)
         store  = ask_one("数据存哪儿？", STORES)
 
@@ -159,7 +152,8 @@ def main():
         copy("tests", dest)
 
     (dest / "lianhuan.json").write_text(json.dumps(
-        {"blocks": blocks, "pet": pet, "engine": engine, "store": store}, ensure_ascii=False, indent=2),
+        # ★ "pet" 这个键留着：core/server.py 装包时要读它。桌宠功能已删，只能是 none。
+        {"blocks": blocks, "pet": "none", "engine": engine, "store": store}, ensure_ascii=False, indent=2),
         encoding="utf-8")
 
     # ── 装完还欠什么，写下来。没有的东西不假装有 ──
@@ -169,8 +163,14 @@ def main():
             "**双击 `start.command`** 就行（macOS / Linux）。它会自己建环境、装依赖、"
             "起服务、开浏览器。第一次要一分钟，之后几秒。\n",
             "或者手动：\n",
-            "```bash", "pip install -r requirements.txt", "python -m core.server", "```",
-            "\n手机也要连：`./start.command --lan`（会提醒你风险）。\n"]
+            "```bash", "pip install -r requirements.txt", "python -m core.server --port 8601", "```",
+            "\n手机也要连：`./start.command --lan`（会提醒你风险）。\n",
+            "## 为什么是 8601，不是 8420\n",
+            "**8420 是安卓完整体 APK 自己的端口**（写死在 `android-full` 的 Java 里）。",
+            "本机这份占着 8420，再把 APK 打开，APK 会连到**这一份**上 ——",
+            "你看到的是这里的页面，说的话也存进这里的 `data/lianhuan.db`；",
+            "APK 沙箱里那份一个字不动。它不报错，只是看起来像成功了。",
+            "所以 `start.command` 默认 8601，你硬要 8420 它会拦一下。详见 `docs/PORT.md`。\n"]
 
     if engine == "echo":
         todo += ["## 换成真的模型\n",
@@ -184,20 +184,6 @@ def main():
     if engine == "cli":
         todo += ["## 引擎\n", "你选了本机 CLI。**装了官方 CLI 并登录过**它才会亮，",
                  "否则界面上会显示「待接」并告诉你差什么。不用 API key。\n"]
-    if pet == "crab":
-        todo += ["## 桌宠素材（你勾了「要只螃蟹」）\n",
-                 "★ 我们**不分发素材**，只指路 —— 那个角色是别家公司的吉祥物，",
-                 "而它的粉丝项目是 AGPL-3.0，跟着开源分发会把你整个项目也传染成 AGPL。\n",
-                 "要用就自己去拿：搜 `clawd-on-desk`（GitHub），把 GIF 放进 `core/web/pet/`，",
-                 "按状态名命名（`idle` / `happy` / `thinking` / `sleeping` …）。",
-                 "**自己玩没问题，别再往外分发。**\n"]
-    if pet == "mine":
-        todo += ["## 桌宠素材（你勾了「我自己画」）\n",
-                 "往 `core/web/pet/` 里丢图，按状态名命名：",
-                 "`idle.svg` / `happy.svg` / `thinking.svg` / `sleeping.svg`。",
-                 "SVG 自带 CSS 动画也行（会包在 `<img>` 里，样式不会污染页面）。GIF 也行。\n"]
-    if pet == "none":
-        todo += ["## 桌宠\n", "没装。以后想加，设置里还有入口。\n"]
     if blocks:
         names = [n for k, n, *_ in BLOCKS if k in blocks]
         todo += [f"## 装了这些积木\n", "、".join(names) + "。每个目录里都有 `demo.html`，打开就能看。\n"]

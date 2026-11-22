@@ -115,6 +115,11 @@ async def _gate_mw(request: Request, call_next):
         if request.headers.get("content-type", "").lower().startswith("text/plain"):
             return _secured(JSONResponse({"error": "JSON 请求要用 application/json"}, status_code=415))
 
+    # ★ 握手端点自己必须免票：它的任务就是让外面的 WebView 先确认「对面是我」，
+    #   确认完才把票放进去。要求先带票就是循环依赖。
+    if path == "/api/android/hello":
+        return _secured(await call_next(request))
+
     # 安卓完整体虽只听回环，回环不是应用沙箱；每次启动的随机票要护住页面和全部 API。
     if os.environ.get("LIANHUAN_ANDROID_TOKEN"):
         if not _gate.check_android_cookie(request.cookies.get(_gate.ANDROID_COOKIE) or ""):
@@ -304,6 +309,28 @@ def pick_engine():
         eng.tools = _hands.all_tools()          # 内置的手 + 用户登记的 MCP 工具
         eng.exec_tool = _hands.execute
     return eng
+
+
+# ── 安卓完整体：证明「你是我自己的后端」──
+# ★ 修的是什么：完整体开机时 Android 把后端起在 127.0.0.1:8420，WebView 再去开
+#   http://127.0.0.1:8420/。可是「端口能应答」不等于「应答的是我」——
+#   只要 8420 上坐着任何别的进程（开发服、另一个 app、随便什么东西），
+#   它就会把别人的页面当成自己的开起来，用户说的话也进了别人的库。
+#   而且 uvicorn 在子线程里绑定失败是 SystemExit(3)，外层根本看不见。
+#
+#   所以：每次启动生成一枚随机 nonce（就是 LIANHUAN_ANDROID_TOKEN），
+#   这里把它的指纹吐出来；Java 那边比对上才开页。对不上就直说，不静默降级。
+@app.get("/api/android/hello")
+def android_hello():
+    tok = os.environ.get("LIANHUAN_ANDROID_TOKEN", "")
+    if not tok:
+        # 普通后端（本机 / 云上 / 开发服）根本没有这枚票：404 就是正确回答。
+        # 完整体看见 404 会意识到「对面不是我」，不会把页面开起来。
+        return JSONResponse({"error": "这里不是安卓完整体"}, status_code=404)
+    import hashlib
+    return {"app": "lianhuan",
+            "android": True,
+            "nonce": hashlib.sha256(tok.encode()).hexdigest()[:16]}
 
 
 # ── 说话 ──────────────────────────────────────────────────
@@ -1583,6 +1610,12 @@ def main() -> None:
         print("     口令存的是加盐哈希，明文不落盘；30 天不用重报。")
         print("     ★ 会起进程的 MCP / 安装接口默认全关；直连本机要显式允许。")
         print("     公共 wifi、宿舍、办公室——还是别开。\n")
+    # ★ 8420 是安卓完整体 APK 自己的后端端口（android-full 里写死的）。
+    #   开发服占着它，APK 的 WebView 会直接连到开发服上 —— 页面是改过的、
+    #   库却不是 APK 沙箱里那份。真踩过：以为是 APK 里生效了，其实一个字没进包。
+    if a.port == 8420 and not os.environ.get("LIANHUAN_ANDROID_TOKEN"):
+        print("  ⚠ 8420 是安卓完整体 APK 的端口。在这儿跑开发服，APK 打开时会")
+        print("    连到这份开发服上，不是它自己沙箱里的后端。换一个：--port 8601\n")
     print(f"  连环 · 开源版   http://127.0.0.1:{a.port}\n")
     uvicorn.run(app, host=host, port=a.port, log_level="warning")
 
