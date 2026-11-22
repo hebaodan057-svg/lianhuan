@@ -5036,6 +5036,18 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
               <label>快<input type="range" id="floatspd" min="0.3" max="2.6" step="0.1" value="1" aria-label="漂浮物速度"></label>
             </div>
           </div>
+          <!-- ★ 调试面板开关（默认关）。
+               留着是为了以后调界面时能看实测尺寸；平时不弹，不挡视线。 -->
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M9 9h6v6h-6z"/><path d="M3 9h3M3 15h3M18 9h3M18 15h3M9 3v3M15 3v3M9 18v3M15 18v3"/></svg></div>
+              <span>调试面板<small>键盘一弹就显示尺寸数据 · 平时不用开</small></span>
+            </div>
+            <div class="floatpick" data-kbdiagsw>
+              <button type="button" data-kbdiag="0">关</button>
+              <button type="button" data-kbdiag="1">开</button>
+            </div>
+          </div>
       </div>
     </div>
   </div>
@@ -18657,9 +18669,28 @@ window.declareP = declareP;
     el.textContent = collect();
   }
   window.__kbDiag = show;
+
+  /* ★ 开关状态读 localStorage，不用 PREF。
+     原因（文件里 10105 行有现成警告）：PREF 是 `const PREF = (...)()`，
+     **不挂在 window 上**，而且这段脚本是独立的 <script>，
+     作用域里根本没有 PREF —— 写 window.PREF 判断永远是 false，
+     那样开关永远读成「关」，打开了也不会生效。
+     调试开关本来就只在本机有意义，换设备不该跟着走。 */
+  var DIAG_KEY = 'lh.kbdiag';
+  function enabled(){
+    try { return localStorage.getItem(DIAG_KEY) === '1'; }
+    catch (e) { return false; }
+  }
+  window.__kbDiagEnabled = enabled;
+  /* 设置里点了开关时调这个：立刻生效，不用刷新 */
+  window.__kbDiagEnable = function(on){
+    if (on) { show(); }
+    else if (el) { el.style.display = 'none'; }
+  };
   /* Java 推过来的原始 insets（物理像素）。只存，不参与任何计算。 */
   window.__kbRaw = function(o){
     window.__lastRaw = o;
+    if (!enabled()) return;                  /* 开关关着就只存不画 */
     if (el && el.style.display !== 'none') show();
   };
 
@@ -18670,15 +18701,41 @@ window.declareP = declareP;
       if (--timer > 0) setTimeout(tick, 120);
     }
   }
+  /* ★ 只有开关打开时才自动弹。
+     原来是无条件自动弹 —— 用户在正常用时被挡，还得手动点掉。
+     开关状态在 localStorage['lh.kbdiag']，设置 › 美化 › 调试面板。 */
   window.addEventListener('focusin', function(e){
+    if (!enabled()) return;
     var t = e.target;
     if (!t || !t.matches || !t.matches('textarea, input')) return;
     timer = 12;                      /* 约 1.4 秒，覆盖键盘动画 */
     setTimeout(tick, 80);
   });
   /* 任何 inset 变化也刷一次（含键盘收起） */
+  /* ★ 开关按钮：设置 › 美化 › 调试面板 的「关 / 开」。
+     点了立刻生效，并存进 localStorage（刷新后保持）。 */
+  function syncBtns(){
+    var on = enabled();
+    document.querySelectorAll('[data-kbdiagsw] [data-kbdiag]').forEach(function(b){
+      b.classList.toggle('on', (b.getAttribute('data-kbdiag') === '1') === on);
+    });
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-kbdiag]');
+    if (!b) return;
+    e.preventDefault();
+    var on = b.getAttribute('data-kbdiag') === '1';
+    try { localStorage.setItem(DIAG_KEY, on ? '1' : '0'); } catch (err) { }
+    syncBtns();
+    if (window.__kbDiagEnable) window.__kbDiagEnable(on);
+  }, true);
+  /* 进设置页时校正一次按钮状态 */
+  setTimeout(syncBtns, 300);
+  setTimeout(syncBtns, 1200);
+
   var lastSig = '';
   setInterval(function(){
+    if (!enabled()) return;               /* 开关关着就别刷，也别自己弹回来 */
     var sig = cs('--kb') + '|' + (document.documentElement.classList.contains('kb-open') ? 1 : 0);
     if (sig !== lastSig){ lastSig = sig; if (el) show(); }
   }, 400);
