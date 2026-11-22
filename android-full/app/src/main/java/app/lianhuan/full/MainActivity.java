@@ -370,73 +370,58 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int code, int result, Intent data) {
         if (code == REQ_FILE && filePick != null) {
             Uri[] uris = WebChromeClient.FileChooserParams.parseResult(result, data);
-            /* ★ 必须把选中的 content:// URI 显式授权给 WebView。
-                 系统把结果交给 Activity 时带的是「只给这个 Activity」的临时权限，
-                 WebView 那边拿 Uri 去读的时候不一定能继承到 —— 不给就会是
-                 「选图成功、界面啥也没出现」。这是个很典型的坑，参见
-                 .operit/attachments 里那份《照片功能修复教学》的坑 3。
-                 （之前只调 parseResult 就回填，所以浏览器能用、APK 不能。） */
-            /* ★★ 把 content:// 逐个复制成本地文件，再回填 file:// 路径。
 
-               为什么不只靠 grantUriPermission：
-                 · 「文件」那个入口返回的是 DocumentProvider 的 URI，权限能继承，一直好用；
-                 · 「照片」走的是 Android 13+ 的 Photo Picker，返回 content://media/picker/…
-                   那是一条**一次性授权**的 URI —— 系统交图的那一瞬间有效，
-                   grantUriPermission 对它也没用（会抛 SecurityException，被 catch 吃掉），
-                   等 WebView 稍后去读时已经无权了。
-                   表现就是：选图成功、界面什么都不出现（JS 那边得到空 File）。
+            /* ★ 诊断：resultCode / data 到底是什么样。
+               上一版只说「没拿到 Uri」，根本不知道是用户取消、data 为 null、
+               还是 data 里明明有值但 parseResult 不认（很可能就是最后这种）。 */
+            StringBuilder dbg = new StringBuilder();
+            dbg.append("result=").append(result);
+            dbg.append(" data=").append(data == null ? "null" : "有");
+            if (data != null) {
+                Uri d0 = data.getData();
+                dbg.append(" get=").append(d0 == null ? "null" : d0.getScheme());
+                int cc = data.getClipData() == null ? 0 : data.getClipData().getItemCount();
+                dbg.append(" clip=").append(cc);
+                String tp = data.getType();
+                dbg.append(" type=").append(tp == null ? "-" : tp);
+            }
+            final StringBuilder report = new StringBuilder();
+            report.append("解析: ").append(dbg);
 
-               复制成本地文件之后，WebView 读的是自己沙箱里的 File，跟权限彻底无关。
-               WebView 的 onShowFileChooser 接受 file:// 形式的返回（官方就是这么设计的）。 */
-            if (uris != null) {
-                for (int i = 0; i < uris.length; i++) {
-                    Uri u = uris[i];
-                    if (u == null) continue;
-                    String sch = u.getScheme();
-                    if (sch != null && sch.startsWith("file")) continue;   // 已经是文件，不动
-                    java.io.InputStream in = null;
-                    java.io.OutputStream out = null;
-                    try {
-                        in = getContentResolver().openInputStream(u);
-                        if (in == null) continue;
-                        java.io.File dir = new java.io.File(getCacheDir(), "picked");
-                        if (!dir.exists()) dir.mkdirs();
-                        String nm = String.valueOf(System.currentTimeMillis()) + "_" + i + ".bin";
-                        java.io.File dst = new java.io.File(dir, nm);
-                        out = new java.io.FileOutputStream(dst);
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-                        out.flush(); out.close(); out = null;
-                        in.close(); in = null;
-                        uris[i] = Uri.fromFile(dst);
-                        say("取到 " + (dst.length() / 1024) + "KB");
-                    } catch (Exception ex) {
-                        /* 复制不了就保留原 Uri，至少不比以前更差；但要说出来，否则又是静默失败 */
-                        say("复制失败 " + ex.getClass().getSimpleName());
-                    } finally {
-                        try { if (out != null) out.close(); } catch (Exception ignored) { }
-                        try { if (in != null) in.close(); } catch (Exception ignored) { }
+            /* ★ 自己抓一遍：不依赖 parseResult 的判定。
+               有些 ROM 的相册返回 RESULT_CANCELED 却带着 data，
+               有些把 Uri 放在 clipData 里单条，parseResult 都会漏。 */
+            if (uris == null || uris.length == 0 || uris[0] == null) {
+                java.util.ArrayList<Uri> got = new java.util.ArrayList<Uri>();
+                if (data != null) {
+                    Uri d1 = data.getData();
+                    if (d1 != null) got.add(d1);
+                    if (data.getClipData() != null) {
+                        int cc = data.getClipData().getItemCount();
+                        for (int i = 0; i < cc; i++) {
+                            Uri ci = data.getClipData().getItemAt(i).getUri();
+                            if (ci != null && !got.contains(ci)) got.add(ci);
+                        }
+                    }
+                    if (got.isEmpty()) {
+                        String ds = data.getDataString();
+                        if (ds != null && ds.length() > 0) {
+                            try { got.add(Uri.parse(ds)); } catch (Exception ignored) { }
+                        }
                     }
                 }
+                if (!got.isEmpty()) {
+                    uris = got.toArray(new Uri[0]);
+                    report.append(" → 自己抓到 ").append(uris.length);
+                } else {
+                    report.append(" → data 里真没有 Uri");
+                }
             }
-            /* ★★ 不再把 Uri 回填给 WebView，改成自己读、自己解码、直接送给页面。
-               见 index.html 末尾的 window.__pickArrived()。
-
-               前面三次尝试（FileReader 提前释放 / grantUriPermission /
-               把 content:// 复制成本地文件再回填）都建立在同一个前提上：
-               「把 Uri 交给 WebView，让它自己去读」。而这个前提在本机上不成立 ——
-               页面始终收到空东西，且连错误都不报。
-
-               现在这条路没有任何 Uri 传递、没有权限继承问题：
-               Activity 手上这份临时读权限是确实有效的（能打开相册、能拿到 Uri），
-               在这里一次读完、压成 JPEG、base64，交给页面一个 data: URL。
-               页面对它就跟对浏览器里挑完的 File 一样。 */
             if (uris != null && uris.length > 0 && uris[0] != null) {
-                say("选到 " + uris.length + " 项，开始读");
+                say(report + " → 开始读 " + uris[0].getScheme());
                 deliverFromJava(uris[0]);
             } else {
-                say("没拿到 Uri");
+                say(report + " → 最终为空");
             }
             /* WebView 的回调必须收尾，否则下次选图它不会再来问 */
             try { filePick.onReceiveValue(null); } catch (Exception ignored) { }
