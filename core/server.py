@@ -896,8 +896,16 @@ async def api_upload(req: Request):
         return JSONResponse({"err": "太大了（上限 10MB）"}, status_code=413)
     UPLOADS.mkdir(parents=True, exist_ok=True)
     name = hashlib.md5(raw).hexdigest()[:16] + "." + ext
-    (UPLOADS / name).write_bytes(raw)
-    return {"ok": True, "url": "/uploads/" + name}
+    dst = UPLOADS / name
+    dst.write_bytes(raw)
+    # ★ 也把 path 给出去。前端拼「〔对方发来一张图片…先用 Read 工具看看 <path>〕」
+    #   那段旁白用的是 path；只给 url 的话拼出来是 undefined，
+    #   模型那边就真的看见「看看 undefined」—— 图等于白传。
+    #   upload_file（非图片）那边一直给了 path，这里之前漏了。
+    # 绝对路径：模型手里的 Read 工具工作目录跟后端进程不一定一样，
+    # 相对路径（data/uploads/x.jpg）在 APK 里会读不到。
+    return {"ok": True, "url": "/uploads/" + name,
+            "path": str(dst.resolve()), "size": len(raw)}
 
 
 @app.get("/uploads/{name}")

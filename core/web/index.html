@@ -13991,6 +13991,12 @@ setTimeout(loadAva, 0);
       text = String(text).trim().replace(/^〔[^〕]*〕\s*/, '');
       if (!text) return document.createElement('div');   /* 不进 DOM，调用方拿去也无害 */
     }
+    /* ★ 兜底：[图片:…] 是给回放用的机器标记，任何情况下都不该画到屏幕上。
+       正常情况下 go() 只传用户敲的那句，走不到这儿；但旧消息、
+       以及以后可能新增的调用点，都留着这道保险。 */
+    if (side === 'me'){
+      text = String(text == null ? '' : text).replace(/\[图片:[^\]\n]*\]/g, '').trim();
+    }
     const at = ts || Date.now();
     maybeSep(at);
     const wrap = document.createDocumentFragment();
@@ -14618,41 +14624,33 @@ setTimeout(loadAva, 0);
       /* 用户那条气泡：图直接显示（多张就并排），文件显示名字；配的话跟在下面 */
       const imgs = ups.filter(u => u.kind === 'img');
       const fnames = ups.filter(u => u.kind === 'file').map(u => u.name);
-      const el = say(t || (fnames.length ? '' : ''), 'me');
-      /* ★ 文件在气泡里得看得见 —— 用户发了什么，屏幕上就该有什么。
-         有配文时附在话下面，没配文时它自己就是内容。 */
-      if (fnames.length){
-        const fl = document.createElement('i');
-        fl.className = 'fnames';
-        fl.textContent = fnames.map(n => '📎'.slice(0, 0) + n).join(' · ');
-        el.appendChild(fl);
-      }
+      /* ★ 顺序：**先图后字**，跟 pull() 回放时完全一致。
+         上一版是先 say(文字) 再另起一条图，于是刚发出去是「字在上、图在下」，
+         而重启后 pull() 回放是「图在上、字在下」—— 同一个对话两种样子。
+         用户要的就是回放那种，所以把发送这一侧改成跟它一样。
+
+         ★ 另一个副作用也一并修掉：只发图不打字时，原来 say('') 会造一个
+           带背景的空气泡（截图里那条白框），重启后 pull() 对空正文直接 return
+           所以又没了。现在这里也不造了。 */
       if (imgs.length){
-        /* ★ 图片单独成一条，不塞进上面那个气泡里 —— 参照微信：
-             发一组图是「一条消息、几格缩略图」，没有气泡底色包着。
-           原来把 <img> prepend 进 el（那个带背景的气泡），视觉上像
-           图片贴在便签上。现在另起一条 shotonly，把图放进去。
-           有配文时：上面一条图片、下面一条文字，跟微信顺序一致。 */
-        const shot = say('', 'me');
-        shot.classList.add('shotonly');
-        /* say('') 会写一个空字符串进 innerHTML，清掉免得占位 */
-        shot.querySelectorAll('a,span,qref').forEach(n => n.remove());
-        const box = document.createElement('div');
-        const nImg = imgs.length;
-        box.className = 'shots n' + (nImg === 1 ? '1' : (nImg <= 4 ? '2' : '3'));
-        imgs.forEach(function(u){
-          const im = document.createElement('img');
-          im.alt = ''; im.loading = 'lazy';
-          /* 取不到就摘掉，别留破图标（/uploads 要登录，cookie 过期也不至于难看） */
-          im.addEventListener('error', function(){ im.remove(); });
-          /* 点一下看大图：复用一个临时覆盖层，不引新依赖 */
-          im.addEventListener('click', function(){ openShot(u.url); });
-          im.src = u.url;
-          box.appendChild(im);
-        });
-        shot.insertBefore(box, shot.firstChild);
-        toBottom();
+        paintShots(imgs.map(function(u){ return u.url; }));
       }
+      /* 有配文、或者有文件名，才画文字气泡；纯图就不画，免得留一个空框。
+         ★ 这里传的是 t —— 用户敲的那句，**不含**〔〕旁白、不含 [图片:] 标记。
+           旁白和标记只进发给后端的 content（见下面的 _b1），屏幕上不该出现。
+           上一版把整串拼好再让 say() 自己去剥，结果 [图片:] 那段没剥干净，
+           截图里就是「…123637[图片:/uploads/xxx.jpg]」原样挂在气泡上。 */
+      if (t || fnames.length){
+        const el = say(t || '', 'me');
+        /* ★ 文件在气泡里得看得见 —— 用户发了什么，屏幕上就该有什么。 */
+        if (fnames.length){
+          const fl = document.createElement('i');
+          fl.className = 'fnames';
+          fl.textContent = fnames.map(n => n).join(' · ');
+          el.appendChild(fl);
+        }
+      }
+      if (imgs.length) toBottom();
       /* ★ 告诉他这些东西躺在服务器哪儿 —— 他要用 Read 亲眼看，不是听我转述。
          这段〔〕在原项目是不进聊天记录的旁白。 */
       const note = attachNote(ups, !!t);
