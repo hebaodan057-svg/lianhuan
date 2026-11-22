@@ -24,12 +24,28 @@ class TestSoftKeyboard(unittest.TestCase):
         self.assertIsNotNone(m)
         self.assertIn("interactive-widget=resizes-content", m.group(1))
 
-    def test_app_height_subtracts_the_keyboard(self):
-        """两条 .app 高度（手机的 100dvh、宽屏的 min(...)）都要扣掉 --kb。"""
-        heights = re.findall(r"height:\s*(calc\([^;]*dvh[^;]*\))", self.h)
-        self.assertGreaterEqual(len(heights), 2, "找不到 .app 的两条高度：" + str(heights))
+    def test_the_keyboard_only_lifts_the_composer(self):
+        """键盘弹出时只把输入条顶上来，app 本身不缩短。
+
+        ★ 这条原来是「.app 的高度必须扣掉 --kb」—— 那是另一种做法：整个应用缩短，
+          底栏和输入框**一起**被顶上去。用户明确要求改成「只顶输入条，
+          底栏和背景待在原地（让键盘盖住）」，所以契约跟着变了：
+            · .app 的高度不再出现 --kb
+            · 改由 .app.kb-open 下的输入条自己抬起来
+        """
+        # 1) app 的任何一条高度都不该再扣键盘
+        heights = re.findall(r"height:\s*([^;]*dvh[^;]*)", self.h)
+        self.assertGreaterEqual(len(heights), 1, "找不到 .app 的高度：" + str(heights))
         for hh in heights:
-            self.assertIn("--kb", hh, "这条高度没扣键盘：" + hh)
+            self.assertNotIn("var(--kb", hh, "app 的高度不该再扣键盘了：" + hh)
+
+        # 2) 输入条必须靠 --kb 抬到键盘上方
+        m = re.search(r"\.app\.kb-open\s+\.composer\{[^}]*bottom:\s*calc\(\s*var\(--kb", self.h)
+        self.assertIsNotNone(m, "键盘弹出时没有把输入条抬起来")
+
+        # 3) 那条脚本还得在算 --kb，否则上面那条 CSS 是死的
+        self.assertIn("--kb", self.h)
+        self.assertIn("kb-open", self.h)
 
     def test_keyboard_inset_comes_from_visual_viewport(self):
         self.assertIn("visualViewport", self.h)
