@@ -268,13 +268,46 @@ public class MainActivity extends Activity {
                  「选图成功、界面啥也没出现」。这是个很典型的坑，参见
                  .operit/attachments 里那份《照片功能修复教学》的坑 3。
                  （之前只调 parseResult 就回填，所以浏览器能用、APK 不能。） */
+            /* ★★ 把 content:// 逐个复制成本地文件，再回填 file:// 路径。
+
+               为什么不只靠 grantUriPermission：
+                 · 「文件」那个入口返回的是 DocumentProvider 的 URI，权限能继承，一直好用；
+                 · 「照片」走的是 Android 13+ 的 Photo Picker，返回 content://media/picker/…
+                   那是一条**一次性授权**的 URI —— 系统交图的那一瞬间有效，
+                   grantUriPermission 对它也没用（会抛 SecurityException，被 catch 吃掉），
+                   等 WebView 稍后去读时已经无权了。
+                   表现就是：选图成功、界面什么都不出现（JS 那边得到空 File）。
+
+               复制成本地文件之后，WebView 读的是自己沙箱里的 File，跟权限彻底无关。
+               WebView 的 onShowFileChooser 接受 file:// 形式的返回（官方就是这么设计的）。 */
             if (uris != null) {
-                for (Uri u : uris) {
+                for (int i = 0; i < uris.length; i++) {
+                    Uri u = uris[i];
                     if (u == null) continue;
+                    String sch = u.getScheme();
+                    if (sch != null && sch.startsWith("file")) continue;   // 已经是文件，不动
+                    java.io.InputStream in = null;
+                    java.io.OutputStream out = null;
                     try {
-                        grantUriPermission(getPackageName(), u,
-                                           Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    } catch (Exception ignored) { }
+                        in = getContentResolver().openInputStream(u);
+                        if (in == null) continue;
+                        java.io.File dir = new java.io.File(getCacheDir(), "picked");
+                        if (!dir.exists()) dir.mkdirs();
+                        String nm = String.valueOf(System.currentTimeMillis()) + "_" + i + ".bin";
+                        java.io.File dst = new java.io.File(dir, nm);
+                        out = new java.io.FileOutputStream(dst);
+                        byte[] buf = new byte[8192];
+                        int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        out.flush(); out.close(); out = null;
+                        in.close(); in = null;
+                        uris[i] = Uri.fromFile(dst);
+                    } catch (Exception ignored) {
+                        /* 复制不了就保留原 Uri，至少不比以前更差 */
+                    } finally {
+                        try { if (out != null) out.close(); } catch (Exception ignored) { }
+                        try { if (in != null) in.close(); } catch (Exception ignored) { }
+                    }
                 }
             }
             filePick.onReceiveValue(uris);
