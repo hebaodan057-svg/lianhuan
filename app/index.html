@@ -7144,7 +7144,7 @@ async function call(key, {query, path, fallback = null, timeout = 8000, method =
     }
   });
 
-  pickBtn.addEventListener('click', function(){ fileInput.click(); });
+  pickBtn.addEventListener('click', function(){ declareP('file'); fileInput.click(); });
   fileInput.addEventListener('change', function(){
     picked = fileInput.files && fileInput.files[0];
     fileName.textContent = picked ? picked.name : '还没选择';
@@ -9016,7 +9016,7 @@ const W = (function(){
   const picClear = () => { spacePic = null; if (picBox) picBox.hidden = true;
                            if (picBtn) picBtn.classList.remove('on');
                            if (picIn) picIn.value = ''; };
-  if (picBtn && picIn) picBtn.addEventListener('click', () => picIn.click());
+  if (picBtn && picIn) picBtn.addEventListener('click', () => { declareP('file'); picIn.click(); });
   if (picX) picX.addEventListener('click', () => { picClear(); tell('图撤了'); });
   if (picIn) picIn.addEventListener('change', function(){
     const f = this.files && this.files[0];
@@ -9219,7 +9219,7 @@ async function loadMem(){
     }
     busy = false; folderbtn.disabled = false;
   }
-  folderbtn.addEventListener('click', function(){ folderpick.click(); });
+  folderbtn.addEventListener('click', function(){ declareP('file'); folderpick.click(); });
   filepick.addEventListener('change', function(){ read(filepick.files); filepick.value = ''; });
   folderpick.addEventListener('change', function(){ read(folderpick.files); folderpick.value = ''; });
 })();
@@ -12323,7 +12323,7 @@ window.haptic = haptic;
 
       const st = t => { const e = document.getElementById('cf-avst'); if (e) e.textContent = t || ''; };
       const avaBox = document.getElementById('cf-ava'), avaFile = document.getElementById('cf-avf');
-      avaBox.onclick = () => avaFile.click();
+      avaBox.onclick = () => { declareP('avatar'); avaFile.click(); };
       avaFile.onchange = function(){
         const f = this.files && this.files[0]; if (!f) return;
         if (f.size > 20 * 1024 * 1024){ st('这张 ' + (f.size / 1048576).toFixed(1) + 'MB，太大了'); return; }
@@ -12357,7 +12357,7 @@ window.haptic = haptic;
       const pFile = document.getElementById('cf-pavf');
       const pst = t => { const e = document.getElementById('cf-pavst'); if (e) e.textContent = t || ''; };
       if (pBox && pFile){
-        pBox.onclick = () => pFile.click();
+        pBox.onclick = () => { declareP('avatar'); pFile.click(); };
         pFile.onchange = function(){
           const f = this.files && this.files[0]; if (!f) return;
           if (f.size > 20 * 1024 * 1024){ pst('这张 ' + (f.size / 1048576).toFixed(1) + 'MB，太大了'); return; }
@@ -14485,10 +14485,13 @@ setTimeout(loadAva, 0);
   window.pickPhotos = () => {
     /* 先留个痕：如果连这行都不出现，说明点击根本没到 JS（CSS 吃掉了？） */
     try { if (window.__pickTrace) window.__pickTrace('已点击「照片」，准备打开选择器'); } catch (e) { }
+    /* ★ 告诉壳层这次是「聊天发图」—— 只有这个用途才走 Java 的 base64 直送。
+       不声明的话，换壁纸/换头像也会被那条通道抢走（用户已踩过）。 */
+    declareP('chat');
     picpick.value = '';    picpick.click();
   };
-  window.pickFiles  = () => { pick.value = '';        pick.click(); };
-  window.pickFolder = () => { folderpick.value = '';  folderpick.click(); };
+  window.pickFiles  = () => { declareP('chat'); pick.value = '';        pick.click(); };
+  window.pickFolder = () => { declareP('chat'); folderpick.value = '';  folderpick.click(); };
 
   /* ★ 0806 要的：复制粘贴来的图也能发。
      剪贴板里夹着图（截了个屏、网页上复制的图、相册里拷的照片）就吃下来，
@@ -17803,6 +17806,23 @@ window._kmMount = function(){
 };
 </script>
 <script>
+/* ══ 选图用途声明 ══
+   壳层有一条「聊天发图」专用通道（Java 解码 → base64 直送页面），
+   因为 WebView 的 Uri[] 回填在这台机器上不通。
+   但那条通道是无条件的 —— 不声明用途的话，换壁纸、换头像都会被它劫走，
+   表现成「点选图，结果聊天里多了一张图」。
+
+   所以每个会打开系统文件选择器的入口，在 click() 之前喊一句：
+     declareP('wallpaper') / declareP('avatar') / declareP('file') / declareP('chat')
+   浏览器里没有 AndroidPick，自动跳过。
+
+   ★ 默认值是 'chat'（壳层那边也是），所以漏标不会崩，只会被抢 —— 别漏。
+*/
+function declareP(purpose){
+  try { if (window.AndroidPick) window.AndroidPick.purpose(purpose || 'chat'); } catch (e) { }
+}
+window.declareP = declareP;
+
 /* ══ 软键盘 ══
    一个数：--kb ＝ 键盘挡住了底下多少像素。CSS 里 .app 的高度扣掉它。
 
@@ -18271,7 +18291,12 @@ window._kmMount = function(){
     new MutationObserver(sync).observe(chatPage, {attributes: true, attributeFilter: ['class']});
   }
 
-  if (pick && file) pick.addEventListener('click', function(){ file.click(); });
+  if (pick && file) pick.addEventListener('click', function(){
+    /* ★ 这是换壁纸，不是聊天发图。必须声明 —— 否则壳层会把选好的图
+       直接塞进聊天输入框（用户报过：「点选图，结果聊天里多了一张图」）。 */
+    declareP('wallpaper');
+    file.click();
+  });
 
   if (file) file.addEventListener('change', function(){
     var f = this.files && this.files[0];

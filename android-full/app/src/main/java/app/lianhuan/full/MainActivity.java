@@ -42,6 +42,12 @@ public class MainActivity extends Activity {
 
     private WebView web;
     private ValueCallback<Uri[]> filePick;
+    /** 这次唤醒文件选择器是为了什么用途。
+     *  'chat' = 聊天发图（走 Java 解码 + base64 直送，因为那条路才通）
+     *  其他值（如 'wallpaper'）= 老老实实把 Uri[] 回填给 WebView，
+     *  让页面自己的 change 监听处理 —— 否则会抢走别人的选图结果。
+     *  ★ 这是修「换壁纸结果变成发图」的关键：原来不管什么用途一律直送聊天。 */
+    private String pickPurpose = "chat";
     private static final int REQ_FILE = 11;
     private static final int REQ_MIC = 12;
     private PermissionRequest pendingMic;
@@ -59,6 +65,7 @@ public class MainActivity extends Activity {
 
         installKeyboardWatcher();    /* ★ 键盘只顶输入条，见方法上的注释 */
         installViewHeightWatcher();  /* ★ 底栏不能跟着键盘动：把真实高度告诉页面 */
+        installPickBridge();         /* ★ 让页面告诉壳层「这次选图是干什么用的」 */
 
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             WebView.setWebContentsDebuggingEnabled(true);
@@ -144,6 +151,8 @@ public class MainActivity extends Activity {
                                              FileChooserParams p) {
                 if (filePick != null) filePick.onReceiveValue(null);
                 filePick = cb;
+                /* 用途由页面在点选图之前用 AndroidPick.purpose() 设置。
+                   没设置就按聊天发图处理（保持老行为）。 */
                 try {
                     startActivityForResult(p.createIntent(), REQ_FILE);
                 } catch (Exception e) {
@@ -415,6 +424,30 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** 页面用来告诉壳层「这次打开文件选择器是干什么用的」。
+     *
+     *  为什么要这个：修照片时给聊天发图加了一条「Java 解码后 base64 直送」
+     *  的专用通道（因为 WebView 的 Uri[] 回填在这台机器上不通）。
+     *  但那条通道是无条件的 —— 用户在设置里点「换壁纸」也会被它劫走，
+     *  表现成「点选图，结果聊天里多了一张图，壁纸没变」。
+     *
+     *  所以让页面在点击前声明用途：
+     *    window.AndroidPick.purpose('chat')      聊天发图（走直送）
+     *    window.AndroidPick.purpose('wallpaper') 壁纸（回填 Uri[] 给页面自己处理）
+     *
+     *  ★ 这个接口只写一个字符串，不返回数据、不做 IO。
+     */
+    private void installPickBridge() {
+        try {
+            web.addJavascriptInterface(new Object() {
+                @android.webkit.JavascriptInterface
+                public void purpose(String p) {
+                    pickPurpose = (p == null || p.length() == 0) ? "chat" : p;
+                }
+            }, "AndroidPick");
+        } catch (Exception ignored) { }
+    }
+
     /** 把安全区推给页面，写成 --safe-area-inset-*（CSS px）。
      *
      *  ★ 为什么必须由壳层给：安卓那份 index.html 去掉了 viewport-fit=cover
@@ -660,6 +693,22 @@ public class MainActivity extends Activity {
                     report.append(" → data 里真没有 Uri");
                 }
             }
+            /* ★ 只有「聊天发图」才走 base64 直送。
+               其他用途（换壁纸、换头像…）必须把 Uri[] 回填给 WebView，
+               让页面自己的 change 监听处理 —— 不然它们的 File 永远是空的，
+               表现就是「点换壁纸，结果聊天里多了一张图」。 */
+            if (!"chat".equals(pickPurpose)) {
+                java.util.ArrayList<Uri> keep = new java.util.ArrayList<Uri>();
+                if (uris != null) {
+                    for (Uri u : uris) if (u != null) keep.add(u);
+                }
+                try { filePick.onReceiveValue(keep.toArray(new Uri[0])); }
+                catch (Exception ignored) { }
+                filePick = null;
+                pickPurpose = "chat";           /* 复位，别影响下一次 */
+                return;
+            }
+
             if (uris != null && uris.length > 0 && uris[0] != null) {
                 say(report + " → 读 " + uris.length + " 张");
                 /* ★ 多选：以前只 deliverFromJava(uris[0])，后面几张全丢。
@@ -675,6 +724,7 @@ public class MainActivity extends Activity {
             /* WebView 的回调必须收尾，否则下次选图它不会再来问 */
             try { filePick.onReceiveValue(null); } catch (Exception ignored) { }
             filePick = null;
+            pickPurpose = "chat";        /* 复位，别影响下一次 */
             return;
         }
         super.onActivityResult(code, result, data);
