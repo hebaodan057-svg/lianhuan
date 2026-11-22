@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- 点按钮时给一下轻震动（navigator.vibrate 在 WebView 里要这条权限，没有就静默无效）。
+         属于普通权限，装上就有，不会弹授权框。 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- ★ 家就在这个应用的沙箱里，所以把系统备份打开：换手机、重装能接回来。
          但 secrets.json（模型 key）**排除在外** —— 那东西不该跟着备份上云。

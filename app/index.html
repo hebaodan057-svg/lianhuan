@@ -474,7 +474,10 @@ html,body{
      而输入框是 position:absolute 贴着 .app 底边的，于是整条被键盘盖住。
      所以扣掉 --kb（底下那段脚本按 visualViewport 实时算的；没键盘时是 0）。
      安卓 adjustResize 会把整个 WebView 缩掉，那边 --kb 自然算出 0，不会重复扣。 */
-  height:calc(100dvh - var(--kb, 0px));
+  /* ★ 原来这里扣掉了 --kb，等于键盘一弹整个 app 缩短，底栏和输入框一起被顶上去。
+     用户要的是"只顶输入条，底栏和背景待在原地"（底栏就让键盘盖住，微信也是这样）。
+     所以这里改回整屏，把 --kb 只加在输入框上（见 .kb-open .composer）。 */
+  height:100dvh;
   overflow:hidden;
   overflow:clip;
   background:var(--bg); color:var(--ink);
@@ -1445,6 +1448,15 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
   padding:6px 7px;
 }
 .composer.on{display:block}
+/* ★ 键盘弹出：输入条跳到键盘上方，底栏不跟着动（它会被键盘盖住，这是要的效果）。
+   --kb 是 visualViewport 算出来的"键盘挡住了多少"，见文件末尾那段脚本。 */
+.app.kb-open .composer{
+  bottom:calc(var(--kb, 0px) + 8px);
+}
+/* 多选那一条也是贴着输入框的，跟着走 */
+.app.kb-open .selbar{
+  bottom:calc(var(--kb, 0px) + 8px);
+}
 /* 老内核不认 backdrop-filter，退回实心卡片，别糊成一片 */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .composer{background:var(--card)}
@@ -14295,13 +14307,20 @@ setTimeout(loadAva, 0);
       }
     });
   }
-  picpick.addEventListener('change', function(){ take(picpick.files); picpick.value = ''; });
-  pick.addEventListener('change',    function(){ take(pick.files);    pick.value = ''; });
-  folderpick.addEventListener('change', function(){ take(folderpick.files); folderpick.value = ''; });
+  /* ★ 这里原来写成 `take(files); input.value = '';` —— 在浏览器里没问题，在 APK 里就不行：
+       take() 里是 FileReader 异步读，而 value='' 是同步执行的，它会把底下那个内容句柄
+       一起释放掉，于是 readAsDataURL 读出来是空的，界面上就是"选完了却什么都没出现"。
+       （Chrome 那边 File 已经把数据拿到内存里了，所以看不出问题。典型的 WebView 坑。）
+     ★ 改法：**选完不清空，改成"打开选择器之前清空"**。
+       这样 File 在整个异步读取期间都有效，而每次点按钮前清一次，
+       连着重选同一张照片也不会因为 value 没变而不触发 change。 */
+  picpick.addEventListener('change',    function(){ take(picpick.files); });
+  pick.addEventListener('change',        function(){ take(pick.files); });
+  folderpick.addEventListener('change',  function(){ take(folderpick.files); });
   /* 加号菜单里这三项调它们（见 openEntry 那边的 __pick） */
-  window.pickPhotos = () => picpick.click();
-  window.pickFiles  = () => pick.click();
-  window.pickFolder = () => folderpick.click();
+  window.pickPhotos = () => { picpick.value = '';    picpick.click(); };
+  window.pickFiles  = () => { pick.value = '';        pick.click(); };
+  window.pickFolder = () => { folderpick.value = '';  folderpick.click(); };
 
   /* ★ 0806 要的：复制粘贴来的图也能发。
      剪贴板里夹着图（截了个屏、网页上复制的图、相册里拷的照片）就吃下来，
@@ -18145,5 +18164,36 @@ window._kmMount = function(){
            me: b.me || '', ai: b.ai || '',
            meInk: b.meInk || '', aiInk: b.aiInk || ''});
   }).catch(function(){ apply(cur); });
+})();
+</script>
+
+<script>
+/* ══ 点一下，震一下 ═════════════════════════════════════════════
+   统一的轻震动（8ms），不是每个按钮各写一遍 —— 用一个捕获阶段的委托就能覆盖全站。
+   ★ 为什么挂在 pointerdown 而不是 click：click 在手机上要等手指抬起、还有 300ms 的
+     历史延迟，震感会跟手脱节。按下即震才像"碰到了"。
+   ★ navigator.vibrate 在安卓 WebView 里需要 VIBRATE 权限（已加进 AndroidManifest），
+     iOS 不支持这个 API —— 那边整个函数不存在，用 try 兜住，静默跳过。
+   ★ 不是所有元素都震：只震"可点的东西"，否则滑一下页面也震，很吵。
+*/
+(function(){
+  'use strict';
+  if (!navigator.vibrate) return;
+
+  var SEL = 'button, .tab, .iconbtn, .setrow, .ditem, .pit, .send, .cbtn, .sw, .bubcol, ' +
+            '.leaf, .silkcard, [data-go], [data-sub], [data-open], [data-act], [data-cell], ' +
+            '[data-door], [data-pick], [data-pull], [data-mat], [data-tm], [data-k], [role="button"]';
+
+  var last = 0;
+  document.addEventListener('pointerdown', function(e){
+    var el = e.target && e.target.closest ? e.target.closest(SEL) : null;
+    if (!el) return;
+    if (el.disabled) return;
+    /* 连点同一个地方时别连着震，80ms 内只震一次（否则长按拖动会嗡嗡响） */
+    var now = Date.now();
+    if (now - last < 80) return;
+    last = now;
+    try { navigator.vibrate(8); } catch (err) {}
+  }, true);
 })();
 </script>
