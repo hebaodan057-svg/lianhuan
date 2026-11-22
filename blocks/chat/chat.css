@@ -112,9 +112,9 @@ svg.i{
 .page.on .msg.me{transform-origin:100% 100%;animation:bubbleMe .22s var(--spring-soft) backwards}
 .page.on .msg:nth-of-type(2){animation-delay:.048s}
 .page.on .msg:nth-of-type(3){animation-delay:.096s}
-.msg{max-width:82%;padding:11px 14px;border-radius:15px;margin-bottom:10px;font-size:14.5px}
-.msg.me{margin-left:auto;background:var(--maple);color:var(--on-maple,#fff);border-bottom-right-radius:5px}
-.msg.him{background:var(--card);box-shadow:var(--shadow);border-bottom-left-radius:5px}
+.msg{max-width:82%;width:-webkit-fit-content;width:fit-content;padding:11px 14px;border-radius:15px;margin-bottom:10px;font-size:14.5px}
+.msg.me{margin-left:auto;background:var(--maple);color:var(--on-maple,#fff)}
+.msg.him{background:var(--card);box-shadow:var(--shadow)}
 /* 消息底下那排：收藏 · 念 · 分享 · 更多（没有踩） */
 /* 0807 定的：那排键卡在两个气泡正中间太扎眼，要缩短它跟自己那句气泡的间隔。
    ★ 关键不是「变窄」，是**两边不对称**：紧贴上面那句（-9px），跟下一句拉开（16px）。

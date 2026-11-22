@@ -745,6 +745,10 @@ svg.i{
   color:var(--ink);font-family:inherit;text-align:left;
   transition:background .45s var(--e-out), box-shadow .2s;
 }
+/* ★ 顶上那条「头像+名字」胶囊（#mebtn）已经删了，上面这条 .top .me 现在匹配不到任何元素
+   —— CSS 留着是因为它那段注释（裸类名 `.me` 漏到聊天气泡上那个坑）还有价值。
+   删了胶囊之后顶栏只剩图标，得让汉堡靠左、其余靠右，不然它们会挤成一堆。 */
+#menu{margin-right:auto}
 .top .me:active{box-shadow:var(--shadow-lift)}
 .ava{
   width:30px;height:30px;flex:none;border-radius:50%;
@@ -1124,9 +1128,45 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
 .page.on .msg.me{transform-origin:100% 100%;animation:bubbleMe .22s var(--spring-soft) backwards}
 .page.on .msg:nth-of-type(2){animation-delay:.048s}
 .page.on .msg:nth-of-type(3){animation-delay:.096s}
-.msg{max-width:82%;padding:11px 14px;border-radius:15px;margin-bottom:10px;font-size:14.5px}
-.msg.me{margin-left:auto;background:var(--maple);color:var(--on-maple,#fff);border-bottom-right-radius:5px}
-.msg.him{background:var(--card);box-shadow:var(--shadow);border-bottom-left-radius:5px}
+/* ★ 气泡宽度要跟字数走，不能一律 82%。
+   `.msg` 是块级元素，宽度默认 `auto` = 撑满父级，#chatlog 又是普通块级容器，
+   于是 `max-width:82%` 就成了实际宽度 —— 说「123」也占掉四分之三行，很难看。
+   `fit-content`：短句贴着字，长句到 82% 换行，两头都是对的。
+   （-webkit- 那行给老一点的 WebView 兜底，安卓壳里装的可能不是最新内核。） */
+/* ★ 气泡形状：四个角一样大，都是 15px。
+   原来还有「贴人那一角收窄到 5px」的写法（学 iMessage 指个方向），
+   但在真机截图里那个角看着像个尖，用户要求去掉 —— 别再加回来。 */
+.msg{max-width:82%;width:-webkit-fit-content;width:fit-content;padding:11px 14px;border-radius:15px;margin-bottom:10px;font-size:14.5px}
+.msg.me{margin-left:auto;background:var(--maple);color:var(--on-maple,#fff)}
+.msg.him{background:var(--card);box-shadow:var(--shadow)}
+
+/* ── 每条气泡前面那张脸 ──────────────────────────────────────────
+   贴在气泡**外侧**，用 absolute 定位，不参与布局 —— 这样气泡自己的
+   `width:fit-content` 和 `max-width` 逻辑一个字都不用改，只是整体让出一条。
+   代价：max-width 要减掉头像占的 44px，贴人那侧再加 44px 的 margin。
+   ★ 选择器一律带 #chatlog —— blocks/chat/ 那份 demo 没有 #chatlog，
+     不能让它跟着缩一截（积木要能单独双击打开看）。
+   ★ 头像本身 pointer-events:none：点它不应该是"选中这句话"之外的事。 */
+#chatlog .msg{position:relative;max-width:calc(82% - 44px);
+  padding:10px 13px;margin-bottom:9px;font-size:14px}
+#chatlog .msg.him{margin-left:44px}
+#chatlog .msg.me{margin-right:44px}
+#chatlog .msg .avs{
+  position:absolute;top:1px;width:34px;height:34px;border-radius:50%;
+  overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600;line-height:1;letter-spacing:0;
+  background:var(--maple-soft);color:var(--maple);
+  box-shadow:0 1px 2px rgba(43,39,36,.07);
+  user-select:none;-webkit-user-select:none;pointer-events:none;
+}
+#chatlog .msg .avs img{width:100%;height:100%;object-fit:cover;display:block}
+#chatlog .msg .avs svg{width:20px;height:20px;fill:currentColor;display:block}
+#chatlog .msg.him .avs{left:-44px}
+#chatlog .msg.me  .avs{right:-44px;background:var(--card);color:var(--sub);
+  box-shadow:0 1px 2px rgba(43,39,36,.12)}
+/* 这两样也得跟着让：时间本来就靠右、那排键本来就靠左，不让就会压到头像底下 */
+#chatlog .metime{margin-right:47px}
+#chatlog .acts{margin-left:47px}
 /* 输入框：钉在底栏上方，不跟着内容滚 */
 /* 消息底下那排：收藏 · 念 · 分享 · 更多（没有踩） */
 /* 0807 定的：这排键卡在两个气泡正中间太显眼，要缩短它跟自己那只气泡的间距。
@@ -2811,13 +2851,10 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
     <button class="iconbtn" id="menu" aria-label="打开索引">
       <svg class="i" viewBox="0 0 24 24"><path d="M4 6l16 0"/><path d="M4 12l16 0"/><path d="M4 18l16 0"/></svg>
     </button>
-    <button class="me" id="mebtn">
-      <span class="ava">·</span>
-      <span class="metext">
-        <b id="myname">他</b>
-        <i id="mysign">　</i>
-      </span>
-    </button>
+<!-- ★ 这里原来是一条「头像 + 名字 + 签名」的胶囊（#mebtn），已按用户要求删掉：
+       名字和签名在聊天气泡、设置页里都看得见，顶栏再摆一条是重复的，还占地方。
+       ★ 删掉之后名字的来源换成 window.myIdentity().name —— 见 quoteName / qrefHTML / setAv，
+         别再依赖 #myname / #mysign 这两个 id，它们已经不存在了。 -->
     <button class="iconbtn" id="callbtn" data-act="call" aria-label="打电话" style="display:none">
       <svg class="i" viewBox="0 0 24 24"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>
     </button>
@@ -5651,8 +5688,9 @@ const PREF = (function(){
   var QUOTE = null;                                /* {cid, who:'qf'|'me', text} */
   function quoteName(who){
     if (who === 'me') return '我';
-    var n = document.getElementById('myname');
-    return (n && n.textContent.trim()) || '他';
+    /* ★ 名字现在从 myIdentity() 拿（顶栏那条胶囊已经删了，myname 这个 id 不存在了） */
+    var me = (window.myIdentity && window.myIdentity()) || {};
+    return String(me.name || '').trim() || '他';
   }
   function drawQuote(){
     var bar = document.getElementById('qbar'); if (!bar) return;
@@ -6225,9 +6263,8 @@ const PREF = (function(){
       signT = setTimeout(function(){ if (window.saveIdentity) window.saveIdentity({sign: v}); }, 400);
     });
   }
-  document.getElementById('mebtn').addEventListener('click', function(){
-    toast('这是我 —— 名字、头像、签名都在「设置 › 美化」里改');
-  });
+  /* ★ 顶栏那条「头像+名字」胶囊已经删掉，这里原来弹「去设置里改」的提示也没了落点。
+   想改名字：设置 › 名字 / 头像。 */
 
   /* 换皮：切一个属性，整页换脸 —— 不用第二个网页（有人问过的那个） */
   function setSkin(k, quiet){
@@ -7326,13 +7363,25 @@ const CHAT = (function(){
 
   /* 头像和名字跟顶栏走 —— 用户在「美化 › 我的签名」里换过的，通话界面上也得是换过的那个 */
   function setAv(){
-    const ta = document.querySelector('#mebtn .ava');
-    if (ta){
-      const im = ta.querySelector('img');
-      avEl.innerHTML = im ? ('<img src="' + im.src + '">') : (ta.textContent || '枫').trim().slice(0, 1);
+    /* ★ 原来是从顶栏那条胶囊（#mebtn .ava / #myname）里抠头像和名字。
+       那条胶囊已经删了，改成直接问 myIdentity() —— 数据来源没变，
+       还是「设置 › 名字 / 头像」里存的那一份。 */
+    const me = (window.myIdentity && window.myIdentity()) || {};
+    const av = String(me.avatar || '').trim();
+    if (avEl){
+      if (/^(https?:)?\/|^data:image/.test(av)){
+        const src = (window.W && window.W.imgUrl) ? window.W.imgUrl(av) : av;
+        /* 用 DOM 拼节点，不拼字符串 —— 省掉转义，也不依赖这个作用域里有没有 esc() */
+        const im = new Image();
+        im.alt = '';
+        im.src = src;
+        avEl.replaceChildren(im);
+      } else {
+        avEl.textContent = (av || '枫').slice(0, 1);
+      }
     }
-    const tn = document.getElementById('myname');
-    if (tn && tn.textContent.trim()) nameEl.textContent = tn.textContent.trim();
+    const nm = String(me.name || '').trim();
+    if (nameEl && nm) nameEl.textContent = nm;
   }
 
   /* ══ 能插话那条路（0830）══════════════════════════════════
@@ -11900,14 +11949,27 @@ window.haptic = haptic;
       /* 没设过就还是那个「枫」，别拿名字凑（名字 → 半个名字，更难看） */
       const avaInner = () => isImg(av) ? '<img src="' + W.esc(W.imgUrl(av)) + '" alt="">'
                                        : W.esc((av || '').trim().slice(0, 2) || '枫');
+      /* 他的脸：存在 config.partner.avatar，跟「我」那份（config.ai.avatar）分开存，
+         互不覆盖。后端 /api/config 是深合并，加一个 partner 键不用改服务端。 */
+      const pa = (c && c.partner) || {};
+      let pav = pa.avatar || '';
+      const pAvaInner = () => isImg(pav) ? '<img src="' + W.esc(W.imgUrl(pav)) + '" alt="">'
+                                         : W.esc((pav || '').trim().slice(0, 2) || '他');
       body.innerHTML = '<div class="tuner">'
         + '<div class="avapick"><div class="big" id="cf-ava">' + avaInner() + '</div>'
         + '<div class="txt"><b>换张脸</b>点一下挑图 · 存进来之前我会先把它缩到 512，'
         + '大图也不怕（20MB 以内）<br><span id="cf-avst"></span></div></div>'
         + '<input type="file" id="cf-avf" accept="image/*" hidden>'
-        + field('cf-name',  '名字', q.name)
-        + field('cf-sign',  '名字底下那行小字', q.sign)
-        + field('cf-empty', '没话说的时候写什么', q.empty)
+        + '<div class="avapick"><div class="big" id="cf-pava">' + pAvaInner() + '</div>'
+        + '<div class="txt"><b>他的脸</b>聊天里他每条话前面那张 · 点一下挑图'
+        + '（一样缩到 512，选完立刻生效）<br><span id="cf-pavst"></span></div></div>'
+        + '<input type="file" id="cf-pavf" accept="image/*" hidden>'
+        /* ★ 原来这里还有三个输入框：名字 / 名字底下那行小字 / 没话说的时候写什么。
+           它们显示的地方只有顶栏那条胶囊 —— 胶囊已经删了，框也就没有落点了，全去掉。
+           ★ 但 config 里这三个字段**没有清空**，只是不再提供修改入口：
+             · name 还在给引用气泡、通话界面用（quoteName / setAv 读 myIdentity()）
+             · empty 还是聊天空态那一句（读 config.ai.empty，没设就走默认文案）
+           所以「存下来」不能发空值盖掉它们，见下面的 saveIdentity 调用。 */
         /* ★ 「在一起的日子」（0830）：主页最上头那个数从这天算起。
              原来它只认 localStorage 里一个 since 键，可**哪儿都没有填它的地方** ——
              主页那行提示写着「设置 › 名字/头像 里填」，点进来却没有这个框，说了假话。
@@ -11916,7 +11978,7 @@ window.haptic = haptic;
         + '<input class="fld" id="cf-since" type="date" value="' + W.esc(PREF.get('since', '')) + '"/>'
         + '<small>主页最上面那个数从这天算起，当天算第 0 天。空着就写「还没设」，我不编一个。</small>'
         + '<button class="savebtn" id="cf-save">存下来</button>'
-        + '<small>这一页改的是我 —— 顶栏、通话界面，都跟着这里走。</small></div>';
+        + '<small>这一页改的是我 —— 聊天里我的头像、通话界面都跟着这里走。</small></div>';
 
       const st = t => { const e = document.getElementById('cf-avst'); if (e) e.textContent = t || ''; };
       const avaBox = document.getElementById('cf-ava'), avaFile = document.getElementById('cf-avf');
@@ -11948,16 +12010,56 @@ window.haptic = haptic;
         fr.readAsDataURL(f);
       };
 
+      /* ── 他的脸：选图 → 缩 512 → 传上去 → 立刻写进 config.partner ──
+         这一步不进「存下来」按钮：头像跟名字/签名不是一套，选完就该看见效果。 */
+      const pBox  = document.getElementById('cf-pava');
+      const pFile = document.getElementById('cf-pavf');
+      const pst = t => { const e = document.getElementById('cf-pavst'); if (e) e.textContent = t || ''; };
+      if (pBox && pFile){
+        pBox.onclick = () => pFile.click();
+        pFile.onchange = function(){
+          const f = this.files && this.files[0]; if (!f) return;
+          if (f.size > 20 * 1024 * 1024){ pst('这张 ' + (f.size / 1048576).toFixed(1) + 'MB，太大了'); return; }
+          pst('在缩…');
+          const fr = new FileReader();
+          fr.onload = () => {
+            const im = new Image();
+            im.onload = async () => {
+              const S = 512, sd = Math.min(im.width, im.height);
+              const cv = document.createElement('canvas'); cv.width = cv.height = S;
+              cv.getContext('2d').drawImage(im, (im.width - sd) / 2, (im.height - sd) / 2,
+                                            sd, sd, 0, 0, S, S);
+              const small = cv.toDataURL('image/jpeg', 0.88);
+              pst('在传…');
+              const up = await call('upload', {method: 'POST', body: {dataURL: small}, fallback: null});
+              if (!up || !up.url){ pst((up && up.err) || '没传上去，再试一次？'); return; }
+              pav = up.url;
+              pBox.innerHTML = pAvaInner();
+              const r = await call('config', {method: 'POST', body: {partner: {avatar: pav}}, fallback: null});
+              if (r && r.ok !== false){
+                if (window.setPartnerAva) window.setPartnerAva(pav);
+                pst('换好了，聊天里已经跟着变了');
+              } else pst('图传上去了，但没存进配置');
+            };
+            im.onerror = () => pst('这张图打不开，换一张？');
+            im.src = fr.result;
+          };
+          fr.onerror = () => pst('读不出来，换一张？');
+          fr.readAsDataURL(f);
+        };
+      }
+
       document.getElementById('cf-save').onclick = async function(){
         const v = id => (document.getElementById(id) || {}).value || '';
         /* 日子跟身份不是一路存法（那四个字段走 config，这个走 prefs）——
            写完当场重画主页那个数，别让用户存完还得刷新一次才看得见。 */
         PREF.set('since', v('cf-since'));
         if (window.paintDays) window.paintDays();
-        /* 后端 0805 起是合并写：只发这四个字段，config.json 里别的入口一个不动 */
-        const ok = await window.saveIdentity({
-          name: v('cf-name'), sign: v('cf-sign'), empty: v('cf-empty'), avatar: av,
-        });
+        /* 只发 avatar。★ 名字/签名/空态那三个框已经删了，这里要是还去取 v('cf-name')，
+           拿到的就是 ''，会把手上的名字和空态文案一起抹掉（后端是深合并，发什么就盖什么）。 */
+        const ok = await window.saveIdentity({ avatar: av });
+        /* 聊天里那些气泡的头像跟着变，别等下次刷新 */
+        if (ok && window.setMyAva) window.setMyAva(av);
         say(ok ? '改好了' : '没存上，再按一下？');
       };
     },
@@ -13340,6 +13442,62 @@ window.haptic = haptic;
   const send = document.querySelector('.send');
   if (!log || !ta) return;
 
+/* ── 每条消息前面那张脸 ──────────────────────────────────────────
+   两个来源，跟顶栏/设置里那套口径完全一致（一个图片地址，或者干脆两个字）：
+     · 我  ← config.ai.avatar       （设置 › 名字/头像 › 换张脸）
+     · 他  ← config.partner.avatar  （设置 › 名字/头像 › 他的脸）
+   都没设的时候：他给一片枫叶，我给名字的前两个字 —— 不留空圈。
+   ★ 只改 DOM 不碰气泡的宽度逻辑：头像由 CSS 绝对定位到气泡外侧。 */
+const AVA = { me: '', him: '', myName: '' };
+const AVA_IMG = v => /^(https?:)?\/|^data:image/.test(String(v || '').trim());
+
+function fillAva(box, side){
+  const v = String(side === 'me' ? AVA.me : AVA.him).trim();
+  if (AVA_IMG(v)){ box.innerHTML = '<img src="' + esc(W.imgUrl(v)) + '" alt="">'; return; }
+  if (v){ box.textContent = v.slice(0, 2); return; }
+  if (side === 'him') box.innerHTML = MAPLE;          /* 枫叶，不用 emoji */
+  else box.textContent = String(AVA.myName || '我').trim().slice(0, 2) || '我';
+}
+function mkAva(side){
+  const b = document.createElement('div');
+  b.className = 'avs';
+  b.setAttribute('aria-hidden', 'true');
+  fillAva(b, side);
+  return b;
+}
+/* 换完头像要能把屏幕上已有的消息一起刷一遍，不然要等刷新才看得到 */
+function refreshMsgAva(){
+  if (!log) return;
+  log.querySelectorAll('.msg').forEach(function(m){
+    const side = m.classList.contains('me') ? 'me' : 'him';
+    let b = m.querySelector('.avs');
+    if (!b){ b = mkAva(side); m.appendChild(b); }
+    else fillAva(b, side);
+  });
+}
+window.refreshMsgAva = refreshMsgAva;
+/* 设置页改完头像直接调这两个，屏幕上已有的消息立刻跟着变（不用刷新页面） */
+window.setMyAva      = function(v){ AVA.me  = v || ''; refreshMsgAva(); };
+window.setPartnerAva = function(v){ AVA.him = v || ''; refreshMsgAva(); };
+
+/* 读两边的头像。我这边先用本地那份顶着，网络回来再校正 —— 跟身份那套一个节奏。 */
+async function loadAva(){
+  try {
+    const me = (window.myIdentity && window.myIdentity()) || {};
+    AVA.myName = me.name || '';
+    AVA.me = me.avatar || '';
+    refreshMsgAva();
+    const c = await call('config', { fallback: null });
+    const p = (c && c.partner) || {};
+    AVA.him = p.avatar || '';
+    const me2 = (c && c.ai) || {};
+    if (me2.avatar){ AVA.me = me2.avatar; }
+    refreshMsgAva();
+  } catch (e) { /* 断线就用手上那份，不报错 */ }
+}
+window.loadMsgAva = loadAva;
+setTimeout(loadAva, 0);
+
   /* 工具的中文说法照抄原项目那张表 —— 用户认得这些词，别自己另起一套 */
   const TOOL = {Write:'写东西',Edit:'改东西',Read:'看文件',Glob:'找文件',Grep:'翻代码',
     WebSearch:'查东西',WebFetch:'翻网页',write_memo:'记一笔',write_timeline:'记时间线',
@@ -13397,8 +13555,9 @@ window.haptic = haptic;
   function qrefHTML(whoCN, quoted){
     let nm = '我';
     if (whoCN === '他'){
-      const n = document.getElementById('myname');
-      nm = (n && n.textContent.trim()) || '他';
+      /* 同上：myname 已经不存在，名字走 myIdentity() */
+      const me = (window.myIdentity && window.myIdentity()) || {};
+      nm = String(me.name || '').trim() || '他';
     }
     return '<span class="qref"><b>' + esc(nm) + '</b>' + esc(quoted) + '</span>';
   }
@@ -13549,6 +13708,7 @@ window.haptic = haptic;
     const qm = String(text || '').match(QREF_RE);
     if (qm) text = String(text).slice(qm[0].length);
     d.innerHTML = (qm ? qrefHTML(qm[1], qm[2]) : '') + linkify(text);
+    d.appendChild(mkAva(side));          /* 头像绝对定位在气泡外侧，不影响排版 */
     wrap.appendChild(d);
     /* 用户自己那句底下没有那排键，时间单挂一行贴着 */
     if (side === 'me'){
