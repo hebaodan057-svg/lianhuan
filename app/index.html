@@ -1459,21 +1459,39 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
 }
 .composer.on{display:block}
 /* ★ 键盘弹出：输入条跳到键盘上方，底栏不跟着动（它会被键盘盖住，这是要的效果）。
-   --kb 是 visualViewport 算出来的"键盘挡住了多少"，见文件末尾那段脚本。 */
-.app.kb-open .composer{
-  bottom:calc(var(--kb, 0px) + 8px);
+   --kb 是壳层推过来的「键盘高度，CSS px」，见文件末尾那段脚本。
+
+   ★★ 这里原来写的是 `.app.kb-open .composer` —— 一个大 bug：
+       JS 把 kb-open 加在 <html> 上（root.classList），而选择器要求
+       .app 自己带这个类，两边对不上，**这条规则从写下来那天起一次都没生效**。
+       之前看到的「输入条抬了一点」全是系统缩 WebView 造成的假象。
+
+      现在同时认两种挂载点（html 或 .app），哪个都行；
+      并且加了 !important —— 要压过下面 @media 里那条 .composer 的 bottom。 */
+html.kb-open .composer,
+.app.kb-open .composer,
+html.kb-open .composer.on,
+.app.kb-open .composer.on{
+  bottom:calc(var(--kb, 0px) + 8px) !important;
 }
 /* 多选那一条也是贴着输入框的，跟着走 */
+html.kb-open .selbar,
 .app.kb-open .selbar{
-  bottom:calc(var(--kb, 0px) + 8px);
+  bottom:calc(var(--kb, 0px) + 8px) !important;
 }
 /* ★ 键盘挡住的这块，消息列表底部也要让出来。
    不然输入条跳上去了，最后几条还是藏在它和键盘底下，滚到底也看不见。
    100px 是原本给底栏留的余量，键盘开着时底栏被盖住，那就直接用 --kb。 */
+html.kb-open .body,
 .app.kb-open .body{
   padding-bottom:calc(var(--kb, 0px) + 16px);
 }
-/* 底栏在键盘弹出时被盖住，就没必要再往上飘 —— 保持在原位（用户要的效果） */
+/* 底栏在键盘弹出时被盖住，就没必要再往上飘 —— 保持在原位（用户要的效果）。
+   ★ 显式钉住，防止它跟着任何父级的 inset 走。 */
+html.kb-open .tabbar,
+.app.kb-open .tabbar{
+  transform:none;
+}
 /* 老内核不认 backdrop-filter，退回实心卡片，别糊成一片 */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .composer{background:var(--card)}
@@ -17810,15 +17828,54 @@ window._kmMount = function(){
      现在两种机器都不会坏：
        · 拿得到 ime：第一次推非零就接管，之后（含收起时推 0）都听它的
        · 拿不到 ime：一直推 0，永远不接管，visualViewport 照旧兜底 */
+  /* ★ 简化后的接管逻辑（原来那个状态机会把值吃掉，而且没法排查）：
+       · 收到非零 → 立即接管并写入（壳层说了算）
+       · 收到 0 且已经接管过 → 归零
+       · 收到 0 且还没接管过 → 忽略（等 visualViewport 兜底）
+     同时记下每次调用，放进诊断面板 —— 下次出问题能直接看到有没有被调用。 */
+  /* ★ 壳层推来的 ime 值，同时跟「视口差值」比一比，取大的。
+     为什么：ime 报的是「相对屏幕」的键盘高度，而 WebView 的视口可能
+     已经被系统缩过（adjustNothing 在某些 ROM 上仍会缩）。
+     两套坐标系对不上时，按 ime 直接抬就会「差一点点露不全」。
+     视口差值 (innerHeight - visualViewport.height) 天然是同一坐标系，
+     哪个大用哪个 —— 保证抬到位，绝不抬不够。 */
   var fromShell = false;
+  var shellKb = 0;
+  window.__kbLog = [];
+
+  function applyKb(){
+    var kb = shellKb;
+    if (vv && !(vv.scale > 1.01)){
+      var dv = Math.round(window.innerHeight - vv.height - vv.offsetTop);
+      if (dv > 0 && dv < window.innerHeight * 0.9 && dv > kb) kb = dv;
+    }
+    window.__kbLog.push(kb);
+    if (window.__kbLog.length > 12) window.__kbLog.shift();
+    if (kb === last) return;
+    last = kb;
+    root.style.setProperty('--kb', kb + 'px');
+    root.classList.toggle('kb-open', kb > 0);
+
+    /* ★ 再上一层保险：直接内联写到输入条上。
+       原因：CSS 那条 `.app.kb-open .composer` 因为类挂在 <html> 上，
+       从来没匹配到过 —— 这就是「输入条一动不动」的直接原因。
+       选择器已经改对了，但内联样式优先级最高，
+       不管以后谁再改 CSS，这条都能保证输入条真的抬起来。 */
+    try {
+      var c = document.querySelector('.composer');
+      if (c){
+        if (kb > 0) c.style.bottom = (kb + 8) + 'px';
+        else c.style.bottom = '';
+      }
+    } catch (e) { }
+  }
+
   window.__kbSet = function (n) {
     n = Math.max(0, Math.round(Number(n) || 0));
+    shellKb = n;
     if (n > 0) fromShell = true;
-    if (!fromShell) return;
-    if (n === last) return;
-    last = n;
-    root.style.setProperty('--kb', n + 'px');
-    root.classList.toggle('kb-open', n > 0);
+    else if (!fromShell) return;          /* 还没接管过、收到 0 —— 忽略 */
+    applyKb();
   };
 
   function apply() {
@@ -17847,7 +17904,11 @@ window._kmMount = function(){
     root.style.setProperty('--vvh', h + 'px');
   };
 
-  vv.addEventListener('resize', function () { syncVvh(); apply(); });
+  vv.addEventListener('resize', function () {
+    syncVvh();
+    apply();
+    if (fromShell) applyKb();   /* 壳层接管时，用视口差值兜底校正 */
+  });
   vv.addEventListener('scroll', apply);
   window.addEventListener('orientationchange', function () { setTimeout(apply, 250); });
   apply();
@@ -18530,13 +18591,16 @@ window._kmMount = function(){
              + '  dpr=' + (window.devicePixelRatio || 1));
     if (ab) lines.push('app: top=' + px(ab.top) + ' bottom=' + px(ab.bottom)
                      + ' h=' + px(ab.height));
-    if (cb) lines.push('composer: bottom=' + px(cb.bottom) + ' h=' + px(cb.height));
+    if (cb) lines.push('composer: bottom=' + px(cb.bottom) + ' h=' + px(cb.height)
+                     + ' inline=' + (comp.style.bottom || '(无)'));
     if (tb) lines.push('tabbar: bottom=' + px(tb.bottom) + ' h=' + px(tb.height));
     lines.push('safe: t=' + cs('--safe-area-inset-top')
              + ' b=' + cs('--safe-area-inset-bottom'));
     /* ★ Java 报的原始值（物理像素）。这是最关键的一行：
          如果 ime 有值而上面 kb=0px，说明是推送/接收链路的问题；
          如果 ime 也是 0，说明 ROM 根本不报，页面侧怎么改都没用。 */
+    lines.push('kbLog=' + (window.__kbLog && window.__kbLog.length
+      ? window.__kbLog.join(',') : '(从未调用!)'));
     var r = window.__lastRaw;
     lines.push(r
       ? ('java: ime=' + r.ime + 'px sys=' + r.sys + 'px nav=' + r.nav
@@ -18549,11 +18613,17 @@ window._kmMount = function(){
     if (!el){
       el = document.createElement('div');
       el.id = 'kbdiag';
+      /* ★ 放在屏幕中间偏上：top:6px 会被状态栏和挖孔摄像头盖住
+         （用户反馈「面板被顶走了，截好几次才弄到」）。
+         用 transform 居中，任何刘海/状态栏/键盘都盖不到它。 */
       el.style.cssText = [
-        'position:fixed','left:6px','right:6px','top:6px','z-index:100000',
-        'background:rgba(0,0,0,.9)','color:#7CFC9E',
-        'font:11px/1.45 monospace','padding:7px 9px','border-radius:8px',
-        'white-space:pre-wrap','word-break:break-all','pointer-events:auto'
+        'position:fixed','left:10px','right:10px','top:50%','z-index:100000',
+        'transform:translateY(-50%)',
+        'background:rgba(0,0,0,.92)','color:#7CFC9E',
+        'font:11px/1.5 monospace','padding:9px 11px','border-radius:10px',
+        'white-space:pre-wrap','word-break:break-all','pointer-events:auto',
+        'box-shadow:0 8px 30px rgba(0,0,0,.5)',
+        'border:1px solid rgba(124,252,158,.35)'
       ].join(';');
       el.addEventListener('click', function(){ el.style.display = 'none'; });
       document.body.appendChild(el);

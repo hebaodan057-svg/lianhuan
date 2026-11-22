@@ -75,8 +75,25 @@ class TestSoftKeyboard(unittest.TestCase):
             self.assertNotIn("var(--kb", hh, "app 的高度不该再扣键盘了：" + hh)
 
         # 2) 输入条必须靠 --kb 抬到键盘上方
-        m = re.search(r"\.app\.kb-open\s+\.composer\{[^}]*bottom:\s*calc\(\s*var\(--kb", self.h)
-        self.assertIsNotNone(m, "键盘弹出时没有把输入条抬起来")
+        #
+        # ★ 这条原来要求选择器写成 `.app.kb-open .composer` —— 但那正是 bug：
+        #   JS 把 kb-open 加在 <html> 上（root = document.documentElement），
+        #   而选择器要求 .app 自己带类，两边永远匹配不到，
+        #   那条 CSS 从写下来那天起一次都没生效过。
+        #   所以现在允许两种挂载点，并且必须允许 !important
+        #   （要压过下面 @media 里 .composer 的 bottom）。
+        pat = r"(html|\.app)\.kb-open\s+\.composer[^{]*\{[^}]*bottom:\s*calc\(\s*var\(--kb"
+        self.assertRegex(self.h, pat,
+                         "键盘弹出时没有把输入条抬起来（选择器要能匹配 kb-open 的实际挂载点）")
+
+        # 3) 还要有一条不依赖 CSS 选择器的兜底：直接内联写 bottom
+        #    这样以后谁再改 CSS，输入条也不会完全不动。
+        self.assertIn("c.style.bottom = (kb + 8) + 'px'", self.h,
+                      "缺少直接写 style.bottom 的兜底，CSS 一旦失配输入条就完全不动")
+
+        # 4) kb-open 挂在 <html> 上这件事本身也要钉住
+        self.assertIn("root.classList.toggle('kb-open'", self.h,
+                      "kb-open 应该挂在 documentElement 上")
 
         # 3) 那条脚本还得在算 --kb，否则上面那条 CSS 是死的
         self.assertIn("--kb", self.h)
