@@ -177,132 +177,119 @@
    配色：继承 workbook.html（纸）与 原项目的旧皮肤（夜色），重点色从琥珀挪到枫叶红。
    ───────────────────────────────────────────── */
 
-:root{
-  --bg:#f4f1ec; --card:#fffdfa; --card2:#faf7f1;
-  --ink:#453d36; --sub:#776f68; --hint:#7b6f64; --line:#e4ded6;   /* 0804 定的：字色别纯黑，暖一点 */
-  --maple:#b5533a; --maple-soft:#f2e3dc; --thread:#ddd2c6;
-  /* 主线：比 --thread 深一档，跟着重点色走三成 —— 惰性求值，四套皮各取各的 */
-  --thread2:color-mix(in srgb, var(--maple) 35%, var(--thread));
-  /* 0807 书脊那版要的三个：--cast 是投影的墨色（RGB 三元组，四套皮各给各的），
-     --pull 是把书抽出来多少，--press 是按下去陷多深（用户那份稿子里 pressDepth=2 档） */
-  --cast:43,39,36; --pull:18px; --press:3px;
-  --shadow:0 1px 2px rgba(43,39,36,.04), 0 8px 22px rgba(43,39,36,.055);
-  --shadow-lift:0 2px 6px rgba(43,39,36,.06), 0 18px 40px rgba(43,39,36,.10);
-  --tape:rgba(185,136,79,.18);
+/* ══ 设计 token ══════════════════════════════════════════════════
+   只有**一套**设计，明暗两套色值。不再有 data-skin 多皮肤（那三套已经删掉，
+   想找回来去 git 历史里翻）。
+   换主题＝切 data-theme（light/dark），或者不写就跟着系统走。
 
-  /* ── 皮肤的结构骨架（颜色在下面按皮分）──
-     换皮＝换这一组值。同一份 DOM，切 data-skin 一个属性就换脸。 */
+   ★ 气泡颜色是独立的：--bub-me / --bub-ai 不跟着强调色走。
+     用户明确要「深色下我的气泡 #424242、他的 #242424；浅色下我的 #424242、他的 #BDBDBD」，
+     所以气泡和 --maple（按钮、选中态那个强调色）是两回事，别再把它们绑在一起。
+   ★ 改色只改这一块，别处不许写死颜色。 */
+:root{
+  /* ── 浅色 ── */
+  --bg:#EDEDED;              /* 底：整页背景 */
+  --card:#FFFFFF;            /* 卡片：浮在底上的白块（他的气泡、设置行、日记卡） */
+  --card2:#F5F5F5;           /* 次级块：输入框底、小标签 */
+  --ink:#111111;             /* 主文字 */
+  --sub:#5C5C5C;             /* 次文字 */
+  --hint:#8A8A8A;            /* 弱文字：时间戳、占位符 */
+  --line:#DCDCDC;            /* 分隔线 */
+
+  /* 强调色：按钮、选中态、链接。用的是中性深灰，跟「我的气泡」同一个灰。 */
+  --maple:#424242; --on-maple:#FFFFFF; --maple-soft:#E0E0E0;
+  --thread:#D8D8D8;
+
+  /* ── 气泡（用户指定）── */
+  --bub-me:#424242;  --bub-me-ink:#FFFFFF;
+  --bub-ai:#BDBDBD;  --bub-ai-ink:#000000;
+
+  /* 主线：比 --thread 深一档，跟着强调色走三成 —— 惰性求值 */
+  --thread2:color-mix(in srgb, var(--maple) 35%, var(--thread));
+  /* 书脊那三样：--cast 是投影的墨色（RGB 三元组） */
+  --cast:17,17,17; --pull:18px; --press:3px;
+  --shadow:0 1px 2px rgba(17,17,17,.05), 0 8px 22px rgba(17,17,17,.07);
+  --shadow-lift:0 2px 6px rgba(17,17,17,.07), 0 18px 40px rgba(17,17,17,.12);
+  --tape:rgba(66,66,66,.12);
+
+  /* 结构骨架 */
   --r:16px;                 /* 卡片圆角 */
   --card-border:none;       /* 有没有描边 */
   --font-display:system-ui,-apple-system,"PingFang SC",sans-serif;
   --display-weight:700;
   --grain:0;                /* 胶片颗粒强度 */
 
-  /* ── Motion Spec v1（用户 0730 在 Claude design 亲手调的，见 web/motion.js）──
-     规矩：只动 transform / opacity；reduced-motion 全降级。
-     spring 是 GSAP back.out 的 CSS 等价写法。 */
+  /* ── Motion Spec v1 ── 规矩：只动 transform / opacity；reduced-motion 全降级 */
   --e-out:cubic-bezier(.22,.61,.36,1);
   --e-in:cubic-bezier(.4,0,1,1);
-  --spring-soft:cubic-bezier(.34,1.26,.64,1);   /* back.out(1.1)，过冲约 4% */
-  --spring-pop:cubic-bezier(.34,1.56,.64,1);    /* back.out(1.7)，过冲约 9% */
-}
-/* ══ 性冷淡：白到发冷、阴影全撤、发丝线、衬线大标题（照 minimalist-ui 的规格）══ */
-:root[data-skin="minimal"]{
-  --bg:#ececeb; --card:#ffffff; --card2:#f6f6f5;
-  --ink:#2f3437; --sub:#6f6d69; --hint:#84827d; --line:rgba(0,0,0,.09);
-  --maple:#9f2f2d; --maple-soft:#fdebec; --thread:rgba(0,0,0,.10);
-  --cast:0,0,0;
-  --shadow:none;
-  --shadow-lift:0 1px 3px rgba(0,0,0,.06);
-  --tape:rgba(0,0,0,.05);
-  --r:5px; --card-border:1px solid rgba(0,0,0,.08);
-  --font-display:Georgia,"Songti SC","Times New Roman",serif;
-  --display-weight:400; --grain:0;
-}
-/* ══ 苹果：分组底 + 纯白卡 + 一个系统蓝；磨砂只留给浮在内容上的东西 ══
-   照 Apple HIG 的分组表格式。impeccable 的 ios.md 明说：
-   "System materials for blur behind bars and sheets; no hand-rolled glassmorphism"
-   —— 所以卡片不糊玻璃，只有顶栏底栏弹层用 backdrop-filter，那儿底下真有内容在滚。 */
-:root[data-skin="apple"]{
-  --bg:#f2f2f7;                    /* systemGroupedBackground */
-  --card:#ffffff; --card2:#f2f2f7;
-  --ink:#1d1d1f; --sub:#4c4c52; --hint:#68686e;
-  --line:rgba(60,60,67,.18);       /* separator hairline */
-  --maple:#007aff;                 /* 一个系统蓝，只给主操作 */
-  --maple-soft:rgba(0,122,255,.12); --thread:rgba(60,60,67,.16);
-  --cast:0,0,0;
-  --shadow:none;                   /* 苹果不靠阴影，靠底色分层 */
-  --shadow-lift:0 8px 30px rgba(0,0,0,.10);
-  --tape:rgba(0,122,255,.12);
-  --r:14px; --card-border:none;
-  --font-display:-apple-system,"SF Pro Display",system-ui,sans-serif;
-  --display-weight:700; --grain:0;
-  --blur:saturate(180%) blur(24px);
-  --material:rgba(255,255,255,.76);
+  --spring-soft:cubic-bezier(.34,1.26,.64,1);   /* back.out(1.1) */
+  --spring-pop:cubic-bezier(.34,1.56,.64,1);    /* back.out(1.7) */
 }
 
+/* ── 深色：跟着系统走 ── */
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#12161d; --card:#1a1f28; --card2:#161b23;
-    --ink:#eef2f7; --sub:#9aabbf; --hint:#7b889b; --line:rgba(255,255,255,.09);
-    --maple:#e0a373; --on-maple:#2b2724;   /* 浅橙底上白字只有 2.17:1，暗色下重点色底的字要用深的（0806 实测）*/ --maple-soft:rgba(224,163,115,.15); --thread:rgba(255,255,255,.13);
-    --cast:0,0,0;                          /* 暗色下投影用纯黑，不然书脊底下会发出一圈暖光 */
-    --shadow:0 1px 2px rgba(0,0,0,.30), 0 8px 22px rgba(0,0,0,.32);
-    --shadow-lift:0 2px 6px rgba(0,0,0,.34), 0 18px 40px rgba(0,0,0,.44);
-    --tape:rgba(224,163,115,.14);
+    --bg:#111111; --card:#1C1C1C; --card2:#161616;
+    --ink:#FFFFFF; --sub:#A8A8A8; --hint:#7A7A7A; --line:#2A2A2A;
+    --maple:#E0E0E0; --on-maple:#111111; --maple-soft:rgba(224,224,224,.16);
+    --thread:rgba(255,255,255,.12);
+    --bub-me:#424242;  --bub-me-ink:#FFFFFF;
+    --bub-ai:#242424;  --bub-ai-ink:#FFFFFF;
+    --cast:0,0,0;      /* 暗色下投影用纯黑，不然书脊底下会泛出一圈暖光 */
+    --shadow:0 1px 2px rgba(0,0,0,.40), 0 8px 22px rgba(0,0,0,.45);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.45), 0 18px 40px rgba(0,0,0,.55);
+    --tape:rgba(255,255,255,.10);
+  }
+  /* 底栏玻璃：白玻璃在纯黑底上会发脏，换成"微亮的黑玻璃" */
+  .tabbar{
+    background:rgba(30,30,30,.70);
+    border-color:rgba(255,255,255,.08);
+    box-shadow:0 10px 30px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .tablens{
+    background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.05));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.13),
+               inset 0 -8px 14px rgba(255,255,255,.04),
+               0 2px 10px rgba(0,0,0,.40);
   }
 }
+
+/* ── 手动钉成浅色（要盖过上面的媒体查询，所以必须再写一遍）── */
 :root[data-theme="light"]{
-  --bg:#f4f1ec; --card:#fffdfa; --card2:#faf7f1;
-  --ink:#453d36; --sub:#776f68; --hint:#7b6f64; --line:#e4ded6;   /* 0804 定的：字色别纯黑，暖一点 */
-  --maple:#b5533a; --maple-soft:#f2e3dc; --thread:#ddd2c6;
-  --cast:43,39,36;                 /* ★ 必须写在这儿：用户把主题钉成浅色、而系统是暗色时，
-                                      暗色媒体查询里那句 --cast:0,0,0 会漏过来（0807 实测逮到）*/
-  --shadow:0 1px 2px rgba(43,39,36,.04), 0 8px 22px rgba(43,39,36,.055);
-  --shadow-lift:0 2px 6px rgba(43,39,36,.06), 0 18px 40px rgba(43,39,36,.10);
-  --tape:rgba(185,136,79,.18);
+  --bg:#EDEDED; --card:#FFFFFF; --card2:#F5F5F5;
+  --ink:#111111; --sub:#5C5C5C; --hint:#8A8A8A; --line:#DCDCDC;
+  --maple:#424242; --on-maple:#FFFFFF; --maple-soft:#E0E0E0; --thread:#D8D8D8;
+  --bub-me:#424242;  --bub-me-ink:#FFFFFF;
+  --bub-ai:#BDBDBD;  --bub-ai-ink:#000000;
+  --cast:17,17,17;   /* ★ 必须写：系统是暗色而用户钉了浅色时，媒体查询里那句 --cast:0,0,0 会漏过来 */
+  --shadow:0 1px 2px rgba(17,17,17,.05), 0 8px 22px rgba(17,17,17,.07);
+  --shadow-lift:0 2px 6px rgba(17,17,17,.07), 0 18px 40px rgba(17,17,17,.12);
+  --tape:rgba(66,66,66,.12);
 }
-:root[data-theme="light"][data-skin="minimal"]{
-  --bg:#ececeb; --card:#ffffff; --card2:#f6f6f5;
-  --ink:#2f3437; --sub:#6f6d69; --hint:#84827d; --line:rgba(0,0,0,.09);
-  --maple:#9f2f2d; --maple-soft:#fdebec; --thread:rgba(0,0,0,.10);
-  --cast:0,0,0;
-  --shadow:none; --shadow-lift:0 1px 3px rgba(0,0,0,.06); --tape:rgba(0,0,0,.05);
-}
-:root[data-theme="light"][data-skin="apple"]{
-  --bg:#f2f2f7; --card:#ffffff; --card2:#f2f2f7;
-  --ink:#1d1d1f; --sub:#4c4c52; --hint:#68686e; --line:rgba(60,60,67,.18);
-  --maple:#007aff; --maple-soft:rgba(0,122,255,.12); --thread:rgba(60,60,67,.16);
-  --shadow:none; --shadow-lift:0 8px 30px rgba(0,0,0,.10); --tape:rgba(0,122,255,.12);
-  --material:rgba(255,255,255,.76);
-}
-/* 苹果的暗色是纯黑，不是我们那套夜蓝 */
-:root[data-theme="dark"][data-skin="apple"],
-:root[data-skin="apple"]{ --material:rgba(255,255,255,.76) }
-@media (prefers-color-scheme: dark){
-  :root[data-skin="apple"]{
-    --bg:#000000; --card:#1c1c1e; --card2:#2c2c2e;
-    --ink:#f5f5f7; --sub:#b7b7bd; --hint:#8e8e93; --line:rgba(84,84,88,.65);
-    --maple:#0a84ff; --maple-soft:rgba(10,132,255,.18); --thread:rgba(255,255,255,.14);
-    --shadow:none; --shadow-lift:0 8px 30px rgba(0,0,0,.6);
-    --material:rgba(28,28,30,.74);
-  }
-}
-:root[data-theme="dark"][data-skin="apple"]{
-  --bg:#000000; --card:#1c1c1e; --card2:#2c2c2e;
-  --ink:#f5f5f7; --sub:#b7b7bd; --hint:#8e8e93; --line:rgba(84,84,88,.65);
-  --maple:#0a84ff; --maple-soft:rgba(10,132,255,.18); --thread:rgba(255,255,255,.14);
-  --shadow:none; --shadow-lift:0 8px 30px rgba(0,0,0,.6);
-  --material:rgba(28,28,30,.74);
-}
+
+/* ── 手动钉成深色（同理，要盖过媒体查询）── */
 :root[data-theme="dark"]{
-  --bg:#12161d; --card:#1a1f28; --card2:#161b23;
-  --ink:#eef2f7; --sub:#9aabbf; --hint:#7b889b; --line:rgba(255,255,255,.09);
-  --maple:#e0a373; --on-maple:#2b2724;   /* 浅橙底上白字只有 2.17:1，暗色下重点色底的字要用深的（0806 实测）*/ --maple-soft:rgba(224,163,115,.15); --thread:rgba(255,255,255,.13);
+  --bg:#111111; --card:#1C1C1C; --card2:#161616;
+  --ink:#FFFFFF; --sub:#A8A8A8; --hint:#7A7A7A; --line:#2A2A2A;
+  --maple:#E0E0E0; --on-maple:#111111; --maple-soft:rgba(224,224,224,.16);
+  --thread:rgba(255,255,255,.12);
+  --bub-me:#424242;  --bub-me-ink:#FFFFFF;
+  --bub-ai:#242424;  --bub-ai-ink:#FFFFFF;
   --cast:0,0,0;
-  --shadow:0 1px 2px rgba(0,0,0,.30), 0 8px 22px rgba(0,0,0,.32);
-  --shadow-lift:0 2px 6px rgba(0,0,0,.34), 0 18px 40px rgba(0,0,0,.44);
-  --tape:rgba(224,163,115,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.40), 0 8px 22px rgba(0,0,0,.45);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.45), 0 18px 40px rgba(0,0,0,.55);
+  --tape:rgba(255,255,255,.10);
+}
+:root[data-theme="dark"] .tabbar{
+  background:rgba(30,30,30,.70);
+  border-color:rgba(255,255,255,.08);
+  box-shadow:0 10px 30px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+}
+:root[data-theme="dark"] .tablens{
+  background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.05));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.13),
+             inset 0 -8px 14px rgba(255,255,255,.04),
+             0 2px 10px rgba(0,0,0,.40);
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -311,6 +298,156 @@
    根子是 html/body 一条样式都没有——`.app` 里锁了 overflow:hidden 没用，
    **iOS 的橡皮筋是拖 body 的**，光靠内层挡不住。
    position:fixed 是这里的关键（只写 overflow:hidden 在 Safari 上照样拉得动）。 */
+/* ══ 聊天背景图 ══
+   只铺聊天页。深色下把整张图**压暗**（乘亮度），不是降透明度 ——
+   降透明度会让图发灰发脏，压亮度的图还是清晰的，只是暗一档。
+   这是微信那个"不管你传什么图，深色下都会暗一度"的做法。 */
+.chatbg{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-size:cover;background-position:center center;background-repeat:no-repeat;
+  opacity:0;transition:opacity .35s var(--e-out);
+}
+.chatbg.on{opacity:1}
+@media (prefers-color-scheme: dark){
+  .chatbg{filter:brightness(.55) saturate(.9)}
+}
+:root[data-theme="dark"] .chatbg{filter:brightness(.55) saturate(.9)}
+:root[data-theme="light"] .chatbg{filter:none}
+
+/* ══ 气泡材质：玻璃 ══════════════════════════════════════════════════
+   ★ 走过的弯路（别再踩）：
+     第一版抄「小克Cat」那份 PDF 的配方（84%→66% 渐变 + blur16/132%），
+     几乎不透，看不出底下的图 —— 用户当场否了。
+     第二版加到 blur20/180%、62% 不透明，配了一条文字阴影兜底，
+     结果**用户的气泡文字出现一圈黑晕**（AI 那边是白阴影所以看着没事）。
+     ★ 结论：**气泡上不要给文字加阴影**。要提对比就动背景，别动字。
+
+   现在这套是照着 iOS 那种「液态玻璃」的意思自己配的：
+     · 底：更透（46%），让背景图真正透上来
+     · 模糊：24px + 饱和 180%，透上来的颜色更鲜、不灰
+     · 高光：顶边一道亮线 + 底边一道弱反光（玻璃的两个面）
+     · 投影：一点点，让气泡浮起来
+   ★ 文字一个 text-shadow 都没有。 */
+:root[data-bub-mat="glass"] #chatlog .msg.me{
+  background:color-mix(in srgb, var(--bub-me) 40%, transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(180%) brightness(1.04);
+  backdrop-filter:blur(24px) saturate(180%) brightness(1.04);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.26),
+             inset 0 -1px 0 rgba(255,255,255,.08),
+             0 6px 20px rgba(0,0,0,.12);
+  text-shadow:none;
+}
+:root[data-bub-mat="glass"] #chatlog .msg.him{
+  background:color-mix(in srgb, var(--bub-ai) 40%, transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(180%) brightness(1.04);
+  backdrop-filter:blur(24px) saturate(180%) brightness(1.04);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.40),
+             inset 0 -1px 0 rgba(255,255,255,.12),
+             0 6px 20px rgba(0,0,0,.09);
+  text-shadow:none;
+}
+/* 老内核不认 backdrop-filter：退回不带模糊的半透明，别变成一块糊的硬块 */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root[data-bub-mat="glass"] #chatlog .msg.me{
+    background:color-mix(in srgb, var(--bub-me) 80%, transparent);
+  }
+  :root[data-bub-mat="glass"] #chatlog .msg.him{
+    background:color-mix(in srgb, var(--bub-ai) 80%, transparent);
+  }
+}
+
+/* 气泡配色那一行：色号可以直接敲，点色块开系统取色器 */
+.bubright{display:flex;align-items:center;gap:7px;flex:none}
+.bubhex{
+  width:74px;text-align:right;border:0;background:transparent;color:var(--sub);
+  font:12.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  outline:none;letter-spacing:.02em;padding:4px 0;
+}
+.bubhex:focus{color:var(--ink)}
+/* ══ 思考链那张弹层：跟着气泡的「玻璃」开关一起开一起关 ══
+   只对 #thinksheet 生效，不动 .sheet 这个通用类 —— 加号菜单那些弹层还是实心，
+   它们里面全是按钮，透过去反而乱。
+   ★ 不透明度用 64%，比气泡（40%）实得多：这里面是一整屏正文，太透没法读。 */
+:root[data-bub-mat="glass"] #thinksheet{
+  background:color-mix(in srgb, var(--card) 64%, transparent);
+  -webkit-backdrop-filter:blur(28px) saturate(180%);
+  backdrop-filter:blur(28px) saturate(180%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),
+             0 -10px 40px rgba(0,0,0,.16);
+}
+/* 老内核退回实心，别变成一块糊的 */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root[data-bub-mat="glass"] #thinksheet{background:var(--card)}
+}
+
+/* ══ 索引抽屉（左边滑出来那张）══
+   同样只看 data-bub-mat：开玻璃时，抽屉也从实心白板变成一片玻璃，
+   右边聊天内容会透过来一点。
+   ★ 不透明度给 66%，比气泡实 —— 这里是一长串可点的条目，太透看不清。
+   ★ 内描边只写右边那一条（inset -1px 0 0）：它贴着屏幕左缘，左边画了也看不见。 */
+:root[data-bub-mat="glass"] .drawer{
+  background:color-mix(in srgb, var(--card) 66%, transparent);
+  -webkit-backdrop-filter:blur(28px) saturate(180%) brightness(1.04);
+  backdrop-filter:blur(28px) saturate(180%) brightness(1.04);
+  box-shadow:inset -1px 0 0 rgba(255,255,255,.35),
+             8px 0 40px rgba(0,0,0,.18);
+}
+/* 搜索框在玻璃上再淡一层会糊，给它自己的实底 */
+:root[data-bub-mat="glass"] .drawer .dsearch{
+  background:color-mix(in srgb, var(--card2) 80%, transparent);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root[data-bub-mat="glass"] .drawer{background:var(--card)}
+}
+
+/* ══ 「给你俩翻点什么」那张面板：跟思考链用同一套玻璃 ══
+   同样只对这一个 id 生效，不动 .sheet 通用类。 */
+:root[data-bub-mat="glass"] #plussheet{
+  background:color-mix(in srgb, var(--card) 64%, transparent);
+  -webkit-backdrop-filter:blur(28px) saturate(180%);
+  backdrop-filter:blur(28px) saturate(180%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),
+             0 -10px 40px rgba(0,0,0,.16);
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root[data-bub-mat="glass"] #plussheet{background:var(--card)}
+}
+
+/* ══ 聊天页顶栏那几颗圆按钮 ══
+   汉堡 / 电话 / 聊天记录 / 设置。开着玻璃时它们也从实心白块变成小玻璃片，
+   参数跟底栏、输入框同一套，只是不透明度更低（里面只有一个 20px 的图标）。 */
+:root[data-bub-mat="glass"] .top .iconbtn{
+  background:color-mix(in srgb, var(--card) 58%, transparent);
+  -webkit-backdrop-filter:blur(20px) saturate(180%) brightness(1.04);
+  backdrop-filter:blur(20px) saturate(180%) brightness(1.04);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),
+             inset 0 -1px 0 rgba(255,255,255,.08),
+             0 4px 14px rgba(0,0,0,.10);
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root[data-bub-mat="glass"] .top .iconbtn{background:var(--card)}
+}
+
+/* 圆形色卡：既是预览也是按钮，点开就是系统的调色器（能调色相/饱和/明暗） */
+.bubcol{
+  flex:none;width:30px;height:30px;padding:0;border:1px solid var(--line);
+  border-radius:50%;background:transparent;cursor:pointer;overflow:hidden;
+}
+.bubcol::-webkit-color-swatch-wrapper{padding:0}
+.bubcol::-webkit-color-swatch{border:0;border-radius:50%}
+.bubcol::-moz-color-swatch{border:0;border-radius:50%}
+
+/* 设置里那两个小按钮 */
+.bgpick{display:flex;gap:6px;flex:none}
+.bgpick button{
+  border:1px solid var(--line);background:var(--card2);color:var(--ink);
+  font-family:inherit;font-size:12.5px;padding:6px 12px;border-radius:9px;cursor:pointer;
+  transition:transform .16s var(--e-out);
+}
+.bgpick button:active{transform:scale(.97)}
+
 html,body{
   height:100%;width:100%;margin:0;padding:0;
   position:fixed;inset:0;
@@ -1137,8 +1274,8 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
    原来还有「贴人那一角收窄到 5px」的写法（学 iMessage 指个方向），
    但在真机截图里那个角看着像个尖，用户要求去掉 —— 别再加回来。 */
 .msg{max-width:82%;width:-webkit-fit-content;width:fit-content;padding:11px 14px;border-radius:15px;margin-bottom:10px;font-size:14.5px}
-.msg.me{margin-left:auto;background:var(--maple);color:var(--on-maple,#fff)}
-.msg.him{background:var(--card);box-shadow:var(--shadow)}
+.msg.me{margin-left:auto;background:var(--bub-me,#424242);color:var(--bub-me-ink,#fff)}
+.msg.him{background:var(--bub-ai,#BDBDBD);color:var(--bub-ai-ink,#000);box-shadow:var(--shadow)}
 
 /* ── 每条气泡前面那张脸 ──────────────────────────────────────────
    贴在气泡**外侧**，用 absolute 定位，不参与布局 —— 这样气泡自己的
@@ -1147,8 +1284,8 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
    ★ 选择器一律带 #chatlog —— blocks/chat/ 那份 demo 没有 #chatlog，
      不能让它跟着缩一截（积木要能单独双击打开看）。
    ★ 头像本身 pointer-events:none：点它不应该是"选中这句话"之外的事。 */
-#chatlog .msg{position:relative;max-width:calc(82% - 44px);
-  padding:10px 13px;margin-bottom:9px;font-size:14px}
+#chatlog .msg{position:relative;max-width:calc(86% - 44px);
+  padding:9px 12px;margin-bottom:9px;font-size:13.5px}
 #chatlog .msg.him{margin-left:44px}
 #chatlog .msg.me{margin-right:44px}
 #chatlog .msg .avs{
@@ -1288,20 +1425,56 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
 }
 .toast.on{opacity:.94;transform:translate(-50%,0)}
 
+/* ══ 输入框：跟底栏同一块玻璃，压成一条 ══
+   原来是「上面一块 textarea、下面一排按钮」两行。现在把 textarea 塞进按钮行里，
+   变成一条：曲别针 · 输入区 · 语音 · 纸飞机。
+   材质跟底栏完全一致（同一套 backdrop-filter 参数），这样上下两块玻璃是一套东西。 */
 .composer{
   position:absolute;left:12px;right:12px;
   bottom:calc(84px + env(safe-area-inset-bottom,0px));
   z-index:8;display:none;
-  background:var(--card);border-radius:16px;box-shadow:var(--shadow-lift);padding:12px 13px 8px;
+  border-radius:21px;
+  /* 跟底栏、气泡同一套材质；不透明度 66%（比底栏略透一点，因为它里头只有一行字） */
+  background:color-mix(in srgb, var(--card) 66%, transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(180%) brightness(1.04);
+  backdrop-filter:blur(24px) saturate(180%) brightness(1.04);
+  border:1px solid color-mix(in srgb, var(--card) 78%, transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),
+             inset 0 -1px 0 rgba(255,255,255,.10),
+             0 10px 30px rgba(43,39,36,.14);
+  padding:6px 7px;
 }
 .composer.on{display:block}
-.composer textarea{
-  width:100%;border:0;background:transparent;resize:none;color:var(--ink);
-  /* ★ 16px 是硬底线：再小 iOS Safari 一聚焦就自动放大整页 */
-  font-family:inherit;font-size:16px;line-height:1.55;outline:none;min-height:25px;max-height:104px;display:block;
+/* 老内核不认 backdrop-filter，退回实心卡片，别糊成一片 */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .composer{background:var(--card)}
 }
-.composer textarea::placeholder{color:var(--hint)}
-.crow{display:flex;align-items:center;gap:6px;margin-top:6px}
+/* 暗色：白玻璃在纯黑底上会发脏，跟底栏用同一套"微亮的黑玻璃" */
+@media (prefers-color-scheme: dark){
+  .composer{
+    background:rgba(30,30,30,.70);
+    border-color:rgba(255,255,255,.08);
+    box-shadow:0 10px 30px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+}
+:root[data-theme="light"] .composer{
+  background:color-mix(in srgb, var(--card) 56%, transparent);
+  border-color:color-mix(in srgb, var(--card) 72%, transparent);
+  box-shadow:0 10px 30px rgba(43,39,36,.14), inset 0 1px 0 rgba(255,255,255,.55);
+}
+:root[data-theme="dark"] .composer{
+  background:rgba(30,30,30,.70);
+  border-color:rgba(255,255,255,.08);
+  box-shadow:0 10px 30px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.composer textarea{
+  /* 塞进 .crow 之后靠 flex 撑开；16px 是硬底线，再小 iOS 一聚焦就自动放大整页 */
+  flex:1;min-width:0;border:0;background:transparent;resize:none;color:var(--ink);
+  font-family:inherit;font-size:16px;line-height:1.5;outline:none;
+  min-height:24px;max-height:104px;display:block;padding:8px 4px;margin:0;
+}
+.composer textarea::placeholder{color:var(--sub);opacity:.75}   /* 同底栏：玻璃上的浅字看不清 */
+.crow{display:flex;align-items:center;gap:3px}   /* ★ 原来是 flex-end：输入框有 padding-top，按钮跟底部对齐就比文字低 2px，看着往下掉。改居中，图标和「说点什么」在同一条水平线上。 */
 .cbtn{
   border:0;background:transparent;color:var(--sub);cursor:pointer;
   display:flex;align-items:center;gap:5px;font-family:inherit;font-size:13px;
@@ -1314,35 +1487,90 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
 }
 .send.pop{animation:sendPop .41s var(--e-out)}   /* .09s 按下 + .32s spring-pop */
 .send{
-  margin-left:auto;width:36px;height:36px;border-radius:50%;border:0;flex:none;
-  background:var(--maple);color:var(--on-maple,#fff);cursor:pointer;
+  /* 纸飞机。★ 底色写死成 #111，**不跟气泡颜色走** —— 用户明确要求它固定黑。
+     原来跟着 --bub-me 变，改气泡色时这颗键会一起变色，很怪。
+     inset 那圈白边是给深色模式留的：黑底黑底，没这圈就分不出按钮在哪儿。 */
+  width:38px;height:38px;border-radius:50%;border:0;flex:none;
+  background:#111111;color:#FFFFFF;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+  transition:transform .16s var(--e-out);
 }
+.send:active{transform:scale(.92)}
+.send svg{width:19px;height:19px}
 .hintline{font-size:11px;color:var(--hint);margin-top:5px;text-align:center}
 
 /* ── 底栏 ── */
+/* ══ 底栏：液态玻璃 ══════════════════════════════════════════════
+   参考 jqzhang921-sudo/cleos 的 GlassTabBar（Apache-2.0）：
+   一条浮着的玻璃，选中的那块本身也是一片玻璃 —— 按下去它会跑到手指底下、
+   鼓出条子的上下边、变成更透的"镜片"；拖着走会跟着速度被拉长；松手弹到最近的格子。
+
+   ★ Web 里做不出真正的折射（那要 shader 采样背景），这里用
+     「半透明 + backdrop-filter 模糊 + 内描边高光」近似。跟手 / 拉长 / 弹簧
+     这三个手感参数是照它的数值做的：
+       宽度 = 格宽 × (0.86 + 0.28 × 按下程度) + 拉伸
+       高度 = 46 + 10 × 按下程度 − 拉伸 × 0.3   （拉长时变细，像液体被扯）
+       拉伸 = |速度| × 0.012，上限 格宽 × 0.28
+   ★ touch-action:none 必须写：不然拖镜片会先被浏览器的滚动抢走。 */
 .tabbar{
   position:absolute;left:12px;right:12px;
   bottom:calc(10px + env(safe-area-inset-bottom,0px));
-  height:62px;background:var(--card);border-radius:16px;box-shadow:var(--shadow-lift);
+  height:64px;
+  /* 胶囊：跟选中那块的形状对齐（就是 999px 那个）。原来 21px 是"方圆"，
+     用户要的是「跟选中态一个形状」，所以整条也做成胶囊。 */
+  border-radius:999px;
+  /* ★ 这里原来是 56% —— 浅色模式配深色背景图时，底下那张照片会透上来，
+     玻璃变成中灰，而没选中的 tab 用的是 --hint(#8A8A8A)，两个字叠在一起就糊了。
+     现在提到 70% 保证文字可读，同时把未选中的颜色从 --hint 加深到 --sub。
+     代价是玻璃感弱一点 —— 这是可读性换来的，别再往下调。 */
+  /* 材质统一成气泡那套：blur 24 + saturate 180% + brightness 1.04，
+     高光也是上下两道（顶边亮线 + 底边弱反光）。
+     ★ 不透明度仍是 68%（不是气泡的 40%）：底栏上面压着文字，
+       40% 在深色背景图上会看不清 —— 这是可读性换的，别再往下调。 */
+  background:color-mix(in srgb, var(--card) 68%, transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(180%) brightness(1.04);
+  backdrop-filter:blur(24px) saturate(180%) brightness(1.04);
+  border:1px solid color-mix(in srgb, var(--card) 78%, transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),
+             inset 0 -1px 0 rgba(255,255,255,.10),
+             0 10px 30px rgba(43,39,36,.14);
   display:flex;align-items:center;z-index:10;
+  isolation:isolate;touch-action:none;
 }
+/* 老内核（不认 backdrop-filter）退回成实心卡片，别变成一块糊的 */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .tabbar{background:var(--card)}
+  .tablens{background:var(--card2);opacity:.9}
+}
+/* 镜片：静止时是淡淡一片，按下变亮变透，拖动时被拉长 */
+.tablens{
+  position:absolute;top:50%;left:0;height:46px;width:60px;
+  transform:translate3d(0,-50%,0);
+  border-radius:999px;pointer-events:none;z-index:0;
+  background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.52));
+  -webkit-backdrop-filter:blur(9px) brightness(1.05) saturate(165%);
+  backdrop-filter:blur(9px) brightness(1.05) saturate(165%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.75),
+             inset 0 -8px 14px rgba(255,255,255,.35),
+             0 2px 10px rgba(43,39,36,.10);
+  will-change:transform,width,height;
+  transition:opacity .18s var(--e-out);
+}
+/* 点中间那片叶子时镜片让位（叶子自己是白的，叠上去会脏） */
+.tabbar.atleaf .tablens{opacity:0}
 .tab{
-  flex:1;border:0;background:transparent;cursor:pointer;color:var(--hint);
+  /* ★ 用 --sub 不是 --hint：底栏是半透明玻璃，底下有图时 hint 那档太浅看不清 */
+  flex:1;border:0;background:transparent;cursor:pointer;color:var(--sub);
   display:flex;flex-direction:column;align-items:center;gap:3px;
   font-family:inherit;font-size:10.5px;padding:0;transition:color .18s;
+  position:relative;z-index:1;
 }
 .tab.on{color:var(--maple)}
-.leaf{
-  flex:none;width:56px;height:56px;margin:0 2px;border:0;border-radius:50%;
-  background:var(--card);box-shadow:var(--shadow-lift);cursor:pointer;
-  transform:translateY(-15px);
-  display:flex;align-items:center;justify-content:center;
-  transition:transform .22s cubic-bezier(.3,1.4,.5,1);
-}
-.leaf:active{transform:translateY(-15px) scale(.9)}
-.leaf svg{width:25px;height:25px;fill:var(--hint);transition:fill .22s}
-.leaf.on svg{fill:var(--maple)}
+/* ★ 中间那个「浮起来的枫叶圆」删掉了。
+     它原来是 flex:none + translateY(-15px)，比别的项窄、还往上顶出来一块，
+     跟胶囊形状也对不上。现在主页按钮就是一个普通的 .tab（见 HTML），
+     五个等宽，镜片能一视同仁地滑过去。 */
 
 /* ── 抽屉 ── */
 .scrim{position:absolute;inset:0;background:rgba(20,17,15,.34);z-index:20;opacity:0;pointer-events:none;transition:opacity .24s var(--e-out)}
@@ -1466,64 +1694,11 @@ h3{font-size:15.5px;font-weight:600;margin:0 0 3px;line-height:1.45}
 .meme .hit{margin-left:auto;flex:none;font-variant-numeric:tabular-nums}
 .meme.cold h3{color:var(--sub)}
 
-/* ══ 冷冰冰不只是换色：卡片网格整个塌成一份文档 ══
-   minimalist-ui 的原话是 "document-style"。所以这里去掉卡片、去掉阴影、
-   去掉圆角，只留发丝线分隔和字号对比 —— 同一份 DOM，靠 CSS 换骨架。 */
-:root[data-skin="minimal"] .grid{display:block}
-:root[data-skin="minimal"] .tile{
-  border-radius:0;box-shadow:none;border:0;border-bottom:1px solid var(--line);
-  padding:15px 2px;display:flex;align-items:flex-start;gap:13px;background:transparent;
-}
-:root[data-skin="minimal"] .tile:active{transform:none;opacity:.55}
-:root[data-skin="minimal"] .tile .ic{
-  width:0;height:0;margin:0;background:transparent;overflow:hidden;
-}
-:root[data-skin="minimal"] .tile h3{font-size:15px;font-weight:500;flex:1;margin:0}
-:root[data-skin="minimal"] .tile small{
-  margin:0;text-align:right;flex:none;max-width:46%;font-variant-numeric:tabular-nums;
-}
-:root[data-skin="minimal"] .tile .bar{display:none}
-:root[data-skin="minimal"] .card{border-radius:0;box-shadow:none;border:0;
-  border-bottom:1px solid var(--line);padding:16px 2px;background:transparent}
-:root[data-skin="minimal"] .note::before{display:none}
-:root[data-skin="minimal"] .note{border-radius:0;box-shadow:none;
-  border-bottom:1px solid var(--line);background:transparent;padding:14px 2px}
-:root[data-skin="minimal"] .stat{border-radius:0;box-shadow:none;border:0;
-  border-bottom:1px solid var(--line);background:transparent;padding:12px 2px}
-:root[data-skin="minimal"] .daycount .n{font-size:86px}   /* 字号对比拉到最满 */
-:root[data-skin="minimal"] .pill{border-radius:0;box-shadow:none;background:transparent;
-  border-bottom:1px solid var(--line)}
+/* ★ 这里原来有两套「结构性皮肤」（性冷淡 / 苹果）：它们不止换色，
+   还把卡片网格塌成单列、把阴影全撤、给底栏加毛玻璃……各自二三十条覆盖。
+   用户要的是「一套固定设计 + 明暗切换」，这两套已经整块删掉。
+   想找回来：git log 里搜 data-skin。 */
 
-/* ══ 苹果：磨砂只给浮在内容上的三样 —— 顶栏、底栏、弹层 ══ */
-:root[data-skin="apple"] .tabbar,
-:root[data-skin="apple"] .composer,
-:root[data-skin="apple"] .sheet,
-:root[data-skin="apple"] .popmenu,
-:root[data-skin="apple"] .selbar{
-  background:var(--material);
-  -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur);
-  border:.5px solid rgba(255,255,255,.28);
-}
-/* ★ 必须带 .top 限定 —— 626 行自家规矩：`me` 到处在用（聊天气泡 .msg.me、
-   记录页 .dayrow.me）。裸 .me 的特异性压过 .msg.me，会把用户的气泡刷成
-   白磨砂、字还继承着重点色上的白 —— 白底白字（0830 用户拍到的就是这个）。 */
-:root[data-skin="apple"] .top .me,
-:root[data-skin="apple"] .iconbtn{
-  background:var(--material);
-  -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur);
-  box-shadow:none;border:.5px solid var(--line);
-}
-/* 卡片老老实实纯色：分层靠底色，不靠阴影也不糊玻璃 */
-:root[data-skin="apple"] .tile,
-:root[data-skin="apple"] .card,
-:root[data-skin="apple"] .stat,
-:root[data-skin="apple"] .meme,
-:root[data-skin="apple"] .rar{box-shadow:none;border:0}
-:root[data-skin="apple"] .note::before{display:none}
-:root[data-skin="apple"] .note{box-shadow:none;border-radius:var(--r)}
-/* 分组列表：卡片贴在一起，中间只有一条 hairline —— 苹果设置页那个样子 */
-:root[data-skin="apple"] .setlist{box-shadow:none;border-radius:var(--r)}
-:root[data-skin="apple"] .tabbar{border-radius:18px}
 
 /* ── 鱼篓 ──
    稀有度是有序等级，不是六个并列的身份，所以一个色相走深浅，不上六种颜色。
@@ -2841,6 +3016,11 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
 </style>
 
 <div class="app" id="app">
+  <!-- 聊天背景图。独立一层，铺在 .app 里、所有内容下面，只在聊天页露出来。
+       ★ 为什么不用给 #p-chat 设 background：#p-chat 在 .body 里，受它的 padding 限制
+         铺不满左右，而且滚动时会跟着内容一起跑。这一层是 .app 的 absolute 子元素，
+         位置固定、不受滚动影响。 -->
+  <div class="chatbg" id="chatbg" aria-hidden="true"></div>
   <!-- ★ 底纸：0804 定的，底纸拿来当整屏的背景板——不再关在 748 的画布里，
        提到 app 这一级顶到顶垫到底，各 120 张、5列×24行、y 覆盖 −52→948。
        只在纸夹／散摞两种排法下显示，由 applyHome 开关。 -->
@@ -3432,39 +3612,51 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
     <input type="file" id="picpick" accept="image/*" multiple hidden>
     <input type="file" id="filepick" multiple hidden>
     <input type="file" id="folderpick" webkitdirectory multiple hidden>
-    <textarea id="ta" rows="1" placeholder="说点什么…"></textarea>
+    <!-- 一条长条：曲别针 · 输入区 · 语音 · 纸飞机。
+         ★ textarea 从上面搬进来了（原来它独占一行），靠 flex:1 撑开，
+           多行输入时整条会长高，跟微信那样。 -->
     <div class="crow">
       <button class="cbtn" data-sub="加号菜单" aria-label="更多">
-        <svg class="i" viewBox="0 0 24 24"><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+        <!-- 曲别针（Tabler paperclip 的形状） -->
+        <svg class="i" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1 -8.49 -8.49l8.57 -8.57a4 4 0 1 1 5.66 5.66l-8.59 8.57a2 2 0 0 1 -2.83 -2.83l8.49 -8.48"/></svg>
       </button>
+      <textarea id="ta" rows="1" placeholder="说点什么…"></textarea>
       <button class="cbtn" data-sub="语音输入" aria-label="语音">
         <svg class="i" viewBox="0 0 24 24"><path d="M9 5a3 3 0 0 1 3 -3a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3a3 3 0 0 1 -3 -3l0 -5"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M8 21l8 0"/><path d="M12 17l0 4"/></svg>
       </button>
-      <!-- 名字由 /api/ai_model 定，别写死（原来钉着「Opus 5」，切了也不跟着变） -->
-      <button class="cbtn" data-modelpick id="mdbtn">…<span aria-hidden="true"> ▾</span></button>
       <button class="send" aria-label="发送">
-        <svg class="i" viewBox="0 0 24 24"><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></svg>
+        <!-- 纸飞机。180 度不用转：这个 path 本来朝右上 -->
+        <svg class="i" viewBox="0 0 24 24"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>
       </button>
     </div>
+    <!-- ★ 模型切换键已经从输入栏搬走（用户要求不显示模型名），
+         现在在「给你俩翻点什么」那张面板里，id 仍然是 mdbtn —— 那边一整套 sheet
+         的 JS 靠它取元素，id 一改整块逻辑就断了。 -->
   </div>
 
   <!-- 底栏 -->
   <nav class="tabbar">
+    <!-- 液态玻璃那片"镜片"：绝对定位，JS 让它跟着手指跑（见文件末尾那段脚本）。
+         放在最前面是因为它要压在所有图标底下，靠 z-index 分层。 -->
+    <span class="tablens" id="tablens" aria-hidden="true"></span>
+    <!-- 五个等宽项，标签走英文（用户要求）。中间那个不再是浮起来的枫叶圆，
+         就是普通的 Home —— 这样镜片能一视同仁地滑过全部五个位置。 -->
     <button class="tab" data-go="chat">
-      <svg class="i" viewBox="0 0 24 24"><path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1"/></svg>聊天
+      <svg class="i" viewBox="0 0 24 24"><path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1"/></svg>Chat
     </button>
     <button class="tab" data-go="write">
-      <svg class="i" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14"/><path d="M9 7l6 0"/><path d="M9 11l6 0"/><path d="M9 15l4 0"/></svg>记事
+      <svg class="i" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14"/><path d="M9 7l6 0"/><path d="M9 11l6 0"/><path d="M9 15l4 0"/></svg>Notes
     </button>
-    <button class="leaf on" data-go="home" aria-label="回主页">
-      <!-- Font Awesome Free 6 · canadian-maple-leaf · Icons CC BY 4.0 -->
-      <svg viewBox="0 0 512 512"><path d="M383.8 351.7c2.5-2.5 105.2-92.4 105.2-92.4l-17.5-7.5c-10-4.9-7.4-11.5-5-17.4 2.4-7.6 20.1-67.3 20.1-67.3s-47.7 10-57.7 12.5c-7.5 2.4-10-2.5-12.5-7.5s-15-32.4-15-32.4-52.6 59.9-55.1 62.3c-10 7.5-20.1 0-17.6-10 0-10 27.6-129.6 27.6-129.6s-30.1 17.4-40.1 22.4c-7.5 5-12.6 5-17.6-5C293.5 72.3 255.9 0 255.9 0s-37.5 72.3-42.5 79.8c-5 10-10 10-17.6 5-10-5-40.1-22.4-40.1-22.4S183.3 182 183.3 192c2.5 10-7.5 17.5-17.6 10-2.5-2.5-55.1-62.3-55.1-62.3S98.1 167 95.6 172s-5 9.9-12.5 7.5C73 177 25.4 167 25.4 167s17.6 59.7 20.1 67.3c2.4 6 5 12.5-5 17.4L23 259.3s102.6 89.9 105.2 92.4c5.1 5 10 7.5 5.1 22.5-5.1 15-10.1 35.1-10.1 35.1s95.2-20.1 105.3-22.6c8.7-.9 18.3 2.5 18.3 12.5S241 512 241 512h30s-5.8-102.7-5.8-112.8 9.5-13.4 18.4-12.5c10 2.5 105.2 22.6 105.2 22.6s-5-20.1-10-35.1 0-17.5 5-22.5z"/></svg>
+    <button class="tab on" data-go="home" aria-label="Home">
+      <!-- 房子。原来是那片枫叶（填充式），跟旁边几条描边图标不是一套；
+           换成 Tabler 的 home，线宽/圆角跟其他几个一致。 -->
+      <svg class="i" viewBox="0 0 24 24"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>Home
     </button>
     <button class="tab" data-go="mem">
-      <svg class="i" viewBox="0 0 24 24"><path d="M12 8l0 4l2 2"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>记忆
+      <svg class="i" viewBox="0 0 24 24"><path d="M12 8l0 4l2 2"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>Memory
     </button>
     <button class="tab" data-go="room">
-      <svg class="i" viewBox="0 0 24 24"><path d="M19 4v16h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12"/><path d="M19 16h-12a2 2 0 0 0 -2 2"/><path d="M9 8h6"/></svg>书房
+      <svg class="i" viewBox="0 0 24 24"><path d="M19 4v16h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12"/><path d="M19 16h-12a2 2 0 0 0 -2 2"/><path d="M9 8h6"/></svg>Study
     </button>
   </nav>
 
@@ -3556,6 +3748,11 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
              轮询已经补上了（20 秒一趟＋回前台一趟），这颗是给用户等不及的时候按的。 -->
         <button class="pit" data-act="sync"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l16 0"/><path d="M12 14l0 -10"/><path d="M12 14l4 -4"/><path d="M12 14l-4 -4"/></svg></span>收新消息</button>
         <button class="pit" data-door="新开一段"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg></span>换新对话</button>
+        <!-- ★ 换脑子（模型切换）：原来这颗在输入栏上，还带着当前模型名。
+             用户要求「不显示模型名、搬进这张面板」，所以做成这里的第 N 项。
+             ★ id 必须还是 mdbtn —— 上面那套 sheet 的 JS 一上来就 getElementById('mdbtn')，
+               拿不到就直接 return，整块换模型功能会静默失效。 -->
+        <button class="pit" id="mdbtn" aria-label="换个脑子"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0 -3 3c-1.5 0 -3 1.2 -3 3c0 .7 .2 1.4 .6 2c-1 .8 -1.6 2 -1.6 3.3c0 1.6 .9 2.9 2.2 3.6c-.1 .3 -.2 .7 -.2 1.1a3 3 0 0 0 3 3h4a3 3 0 0 0 3 -3c0 -.4 0 -.8 -.2 -1.1c1.3 -.7 2.2 -2 2.2 -3.6c0 -1.3 -.6 -2.5 -1.6 -3.3c.4 -.6 .6 -1.3 .6 -2c0 -1.8 -1.5 -3 -3 -3a3 3 0 0 0 -3 -3z"/><path d="M12 3v18"/></svg></span>换脑子</button>
         <!-- 0818：打电话。★ 入口放这儿不放底栏 —— 底栏那四格只放「去处」，打电话是「动作」（DESIGN.md 导航硬线）。 -->
         <!-- ★ 0820 要的哄睡。跟打电话是两回事：不开麦、我一直说、用户躺着听。 -->
         <button class="pit" data-act="lull"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M17.75 4.09l-2.15 1.32l.6 -2.45l-1.95 -1.62l2.51 -.2l.99 -2.32l.97 2.32l2.51 .2l-1.95 1.62l.6 2.45z"/><path d="M12 3a9 9 0 1 0 9 9c-3.6 0 -6.6 -2.4 -9 -9"/></svg></span>哄我睡</button>
@@ -3706,121 +3903,13 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
                           font-family:inherit;font-size:16px;outline:none">
           </div>
           <button class="setrow" data-sub="名字 / 头像"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25"/><path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></div><span>名字 / 头像 / 主题色</span><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6l-6 6"/></svg></button>
-          <div class="swrow">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M3 21v-4a4 4 0 1 1 4 4h-4"/><path d="M21 3a16 16 0 0 0 -12.8 10.2"/><path d="M21 3a16 16 0 0 1 -10.2 12.8"/><path d="M10.6 9a9 9 0 0 1 4.4 4.4"/></svg></div>
-              <span>皮肤<small>整套换，同一个页面不用重装</small></span>
-            </div>
-            <div class="floatpick" id="skinpick">
-              <button data-k="paper" class="on">纸</button>
-              <button data-k="minimal">性冷淡</button>
-              <button data-k="apple">苹果</button>
-            </div>
-          </div>
-          <!-- (0827) 外观。皮肤管的是「哪一套设计」，这一排管的是「亮还是暗」，两者正交：
-               三套皮 × 三档外观。原来只有系统深色模式能把夜蓝调出来，等于没有入口。 -->
-          <div class="swrow">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/></svg></div>
-              <span>外观<small>纸底，还是夜色</small></span>
-            </div>
-            <div class="floatpick" id="themepick">
-              <button data-tm="auto" class="on">跟随系统</button>
-              <button data-tm="light">纸</button>
-              <button data-tm="dark">夜</button>
-            </div>
-          </div>
-          <div class="swrow" data-homerow>
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M20 4l-16 16"/><path d="M12 3v18"/></svg></div>
-              <span>主页<small>方块排着，还是挂在丝线上</small></span>
-            </div>
-            <div class="floatpick" id="homepick">
-              <button data-home-style="tiles" class="on">方块</button>
-              <button data-home-style="drape">垂丝</button>
-              <button data-home-style="blinds">横渡</button>
-              <button data-home-style="lantern">灯串</button>
-              <button data-home-style="paper">纸夹</button>
-              <button data-home-style="stack">散摞</button>
-            </div>
-          </div>
-
-          <!-- 跟主页排法有关的几行收在「主页」这一排底下，选中哪种排法才展开哪几行：
-               排一排只有方块有；拖动只有三种丝线排法有；风是会飘的几种才有（applyHome 里管）。
-               丝线颜色不进来 —— 它跟重点色是一类，每种排法都常驻。 -->
-          <div class="homeopts" data-homeopts><div class="homeopts-in">
-            <button class="setrow" data-sort data-sortrow hidden><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 6l16 0"/><path d="M4 12l16 0"/><path d="M4 18l16 0"/></svg></div><span>排一排主页<small>拖着换顺序，也能藏起来</small></span><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6l-6 6"/></svg></button>
-            <div class="swrow" data-dragrow hidden>
-              <div style="display:flex;align-items:center;gap:12px">
-                <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M18 9l3 3l-3 3"/><path d="M15 12h6"/><path d="M6 9l-3 3l3 3"/><path d="M3 12h6"/><path d="M9 18l3 3l3 -3"/><path d="M12 15v6"/><path d="M15 6l-3 -3l-3 3"/><path d="M12 3v6"/></svg></div>
-                <span>拖动主页<small>卡片和线拖到哪儿挂哪儿 · 位置记在本机</small></span>
-              </div>
-              <!-- 0805 需求里说的：重置跟开关放一行，别自己占一行 -->
-              <div class="floatpick" data-dragsw>
-                <button data-drag="0" class="on">关</button>
-                <button data-drag="1">开</button>
-                <button data-reset style="margin-left:6px">重置线条</button>
-              </div>
-            </div>
-            <div class="swrow" data-windrow hidden>
-              <div style="display:flex;align-items:center;gap:12px">
-                <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M5 8h8.5a2.5 2.5 0 1 0 -2.34 -3.24"/><path d="M3 12h15.5a2.5 2.5 0 1 1 -2.34 3.24"/><path d="M4 16h5.5a2.5 2.5 0 1 1 -2.34 3.24"/></svg></div>
-                <span>风<small>丝线飘多大 · 纸被掀起来多深</small></span>
-              </div>
-              <input type="range" data-wind min="0" max="2.4" step="0.1" value="0.7" aria-label="风力">
-            </div>
-          </div></div>
-
-          <!-- 日记本排法（0806）。0805 的注释里写了「设置 › 美化 › 日记本 里切」，
-               但这一行当时没做出来 —— silkDiary() 只有定义没人调，等于切不过去。补上。 -->
-          <div class="swrow">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-11a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1m3 0v18"/></svg></div>
-              <span>日记本<small>按「这是什么时候的我」分档，还是一条流水读到底</small></span>
-            </div>
-            <div class="floatpick" id="diarypick">
-              <button data-diary-style="tiered" class="on">分档</button>
-              <button data-diary-style="plain">普通</button>
-            </div>
-          </div>
-          <!-- ★ 风 / 拖动 / 重置线条：用户 silk-home 原件里就有这三个，这里是平移过来的。
-               档位（0~2.4、步长 .1、默认 0.7）和存的键（silk.wind / silk.pos.<排法>）一字未改，
-               只把外壳换成 proto 这边的 .swrow ＋ .floatpick，好跟别的设置项长一样。
-               风这一档丝线三版和纸夹、散摞一起吃；0.7 就是原始设计稿调好的那个手感。
-               这几行现在收在「主页」那一排底下的展开区里，跟着选中的排法展开（applyHome 里）。 -->
-          <!-- 丝线颜色：原始设计稿里就有的六选一，这一版一直没搬。
-               「中性」＝跟着重点色走、只占三成，不跟强调色抢；挑了具体颜色就锁那个。
-               灯串下不生效（那儿的线由灯光定色，原始设计稿里写死的规矩）。 -->
-          <!-- ★ 0805 需求里说的：重点色和丝线颜色是一类东西，别被风和拖动隔开 ——
-               排成上下挨着的两行，而且顺序是「先定重点色，再定线跟不跟它」。 -->
-          <div class="swrow">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25"/><path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></div>
-              <span>重点色<small>点一下，整个界面跟着换</small></span>
-            </div>
-            <div class="swatches" id="swatches"></div>
-            <!-- 0806 报的：只看得到颜色、看不到名字——12 个无名色点，
-                 title 在手机上 hover 不出来。把当前挑中那个的名字写在底下。 -->
-            <div class="swname" id="swname"></div>
-          </div>
-          <div class="swrow" data-threadrow hidden>
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M4 4c0 8 4 12 8 12s8 -4 8 -12"/><path d="M4 20c0 -4 4 -4 8 -4s8 0 8 4"/></svg></div>
-              <span>丝线颜色<small>中性＝跟着重点色走，不占强调色</small></span>
-            </div>
-            <div class="swatches" id="threadsw"></div>
-          </div>
-          <div class="swrow">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M5 21c.5 -4.5 2.5 -8 7 -10"/><path d="M9 18c6.218 0 10.5 -3.288 11 -12v-2h-4.014c-9 0 -11.986 4 -12 9c0 1 0 3 2 5h3l.014 0"/></svg></div>
-              <span>漂浮物<small>飘什么 · 落多密 · 飘多快（可以多选）</small></span>
-            </div>
-            <div class="floatpick" id="floatpick"></div>
-            <div class="fltune">
-              <label>密<input type="range" id="floatnum" min="0" max="30" step="1" value="9" aria-label="漂浮物密度"></label>
-              <label>快<input type="range" id="floatspd" min="0.3" max="2.6" step="0.1" value="1" aria-label="漂浮物速度"></label>
-            </div>
-          </div>
+          <!-- ★ 这里原来是「皮肤」三选一（纸 / 性冷淡 / 苹果）。已删：
+               只剩一套设计，不再提供整套换肤。暗色是下面「外观」那一排管的，跟着它是两件事。 -->
+          <button class="setrow" data-open="beautypage">
+            <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25"/><path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></div>
+            <span>美化<small>聊天背景 · 气泡材质与配色 · 明暗 · 漂浮物</small></span>
+            <svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6l-6 6"/></svg>
+          </button>
                   </div>
       </div>
 
@@ -4657,6 +4746,200 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
   </div>
 
   <!-- 聊天记录：热力图本身就是月历，点一天就翻那天。热力图留着不删——0804 定的，它好用。 -->
+  <!-- ══ 美化（独立一页）══
+       原来这些控件散在「设置」那张长列表里，跟功能开关混在一起。
+       现在整块搬进来：聊天背景 / 气泡材质 / 四个气泡颜色 / 明暗 / 漂浮物。
+       ★ 控件本身一个字节没改（连 id 都没动）—— 那边的绑定是在页面加载时
+         按 id 找元素的，搬到哪个容器里都照样工作。只是外面多加了一层
+         .setlist，包住这些 .swrow，让它们还有卡片底。 -->
+  <div class="sub" id="beautypage">
+    <div class="top">
+      <button class="iconbtn" data-close="beautypage" aria-label="返回">
+        <svg class="i" viewBox="0 0 24 24"><path d="M5 12l14 0"/><path d="M5 12l6 6"/><path d="M5 12l6 -6"/></svg>
+      </button>
+      <div class="stamp">美化</div>
+      <div style="width:38px"></div>
+    </div>
+    <div class="subwrap">
+      <div class="setlist">
+          <!-- 聊天背景：只铺聊天页，深浅色共用一张（深色下自动压暗，见 .chatbg 的注释）。
+               没有图的时候「移除」是藏着的，有图才出现。 -->
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z"/><path d="M4 16l4 -4a3 3 0 0 1 3 0l5 5"/><path d="M14 14l1 -1a3 3 0 0 1 3 0l2 2"/></svg></div>
+              <span>聊天背景<small>只铺聊天页 · 深浅色共用一张</small></span>
+            </div>
+            <div class="bgpick">
+              <button id="chatbg-pick">选图</button>
+              <button id="chatbg-clear" hidden>移除</button>
+            </div>
+          </div>
+          <input type="file" id="chatbg-file" accept="image/*" hidden>
+
+          <!-- ══ 气泡搭配 ══
+               材质：普通（纯色）/ 玻璃（抄自「小克Cat 专属前端」的玻璃配方，见 .msg 的 CSS 注释）。
+               颜色：我的 / 他的分开调，存进 config.ui.bub。
+               ★ 文字颜色不用管 —— 会根据气泡亮度自动算黑或白，见下面 JS 里的 inkFor()。 -->
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25"/></svg></div>
+              <span>气泡材质<small>普通＝纯色 · 玻璃＝半透明 + 磨砂</small></span>
+            </div>
+            <div class="floatpick" id="bubmat">
+              <button data-mat="plain" class="on">普通</button>
+              <button data-mat="glass">玻璃</button>
+            </div>
+          </div>
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z"/></svg></div>
+              <span>我的气泡<small>点右边的色号可以直接敲 · 字色自动配</small></span>
+            </div>
+            <div class="bubright">
+              <input class="bubhex" type="text" id="bub-me-hex" value="#424242"
+                     spellcheck="false" maxlength="7" aria-label="我的气泡色号">
+              <input class="bubcol" type="color" id="bub-me" aria-label="我的气泡颜色">
+            </div>
+          </div>
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z"/><path d="M3 3l18 18" opacity=".45"/></svg></div>
+              <span>他的气泡<small>跟我的分开调</small></span>
+            </div>
+            <div class="bubright">
+              <input class="bubhex" type="text" id="bub-ai-hex" value="#BDBDBD"
+                     spellcheck="false" maxlength="7" aria-label="他的气泡色号">
+              <input class="bubcol" type="color" id="bub-ai" aria-label="他的气泡颜色">
+            </div>
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg></div>
+              <span>我的文字<small>留空＝按气泡亮度自动配</small></span>
+            </div>
+            <div class="bubright">
+              <input class="bubhex" type="text" id="bub-meink-hex" value="#FFFFFF"
+                     spellcheck="false" maxlength="7" aria-label="我的文字颜色">
+              <input class="bubcol" type="color" id="bub-meink" aria-label="我的文字颜色">
+            </div>
+          </div>
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/><path d="M3 3l18 18" opacity=".45"/></svg></div>
+              <span>他的文字<small>留空＝自动</small></span>
+            </div>
+            <div class="bubright">
+              <input class="bubhex" type="text" id="bub-aiink-hex" value="#000000"
+                     spellcheck="false" maxlength="7" aria-label="他的文字颜色">
+              <input class="bubcol" type="color" id="bub-aiink" aria-label="他的文字颜色">
+            </div>
+          </div>
+          </div>
+          <div class="swrow" style="padding-top:0;padding-bottom:12px">
+            <span style="font-size:12px;color:var(--hint);line-height:1.7">
+              气泡颜色改了就固定下来，不再跟着明暗模式变；想恢复默认，把色块改回原来的值即可。
+            </span>
+          </div>
+          <!-- (0827) 外观。这里管的是「亮还是暗」 -->
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/></svg></div>
+              <span>外观<small>纸底，还是夜色</small></span>
+            </div>
+            <div class="floatpick" id="themepick">
+              <button data-tm="auto" class="on">跟随系统</button>
+              <button data-tm="light">浅色</button>
+              <button data-tm="dark">深色</button>
+            </div>
+          </div>
+          <div class="swrow" data-homerow>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M20 4l-16 16"/><path d="M12 3v18"/></svg></div>
+              <span>主页<small>方块排着，还是挂在丝线上</small></span>
+            </div>
+            <div class="floatpick" id="homepick">
+              <button data-home-style="tiles" class="on">方块</button>
+              <button data-home-style="drape">垂丝</button>
+              <button data-home-style="blinds">横渡</button>
+              <button data-home-style="lantern">灯串</button>
+              <button data-home-style="paper">纸夹</button>
+              <button data-home-style="stack">散摞</button>
+            </div>
+          </div>
+
+          <!-- 跟主页排法有关的几行收在「主页」这一排底下，选中哪种排法才展开哪几行：
+               排一排只有方块有；拖动只有三种丝线排法有；风是会飘的几种才有（applyHome 里管）。
+               丝线颜色不进来 —— 它跟重点色是一类，每种排法都常驻。 -->
+          <div class="homeopts" data-homeopts><div class="homeopts-in">
+            <button class="setrow" data-sort data-sortrow hidden><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 6l16 0"/><path d="M4 12l16 0"/><path d="M4 18l16 0"/></svg></div><span>排一排主页<small>拖着换顺序，也能藏起来</small></span><svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6l-6 6"/></svg></button>
+            <div class="swrow" data-dragrow hidden>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M18 9l3 3l-3 3"/><path d="M15 12h6"/><path d="M6 9l-3 3l3 3"/><path d="M3 12h6"/><path d="M9 18l3 3l3 -3"/><path d="M12 15v6"/><path d="M15 6l-3 -3l-3 3"/><path d="M12 3v6"/></svg></div>
+                <span>拖动主页<small>卡片和线拖到哪儿挂哪儿 · 位置记在本机</small></span>
+              </div>
+              <!-- 0805 需求里说的：重置跟开关放一行，别自己占一行 -->
+              <div class="floatpick" data-dragsw>
+                <button data-drag="0" class="on">关</button>
+                <button data-drag="1">开</button>
+                <button data-reset style="margin-left:6px">重置线条</button>
+              </div>
+            </div>
+            <div class="swrow" data-windrow hidden>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M5 8h8.5a2.5 2.5 0 1 0 -2.34 -3.24"/><path d="M3 12h15.5a2.5 2.5 0 1 1 -2.34 3.24"/><path d="M4 16h5.5a2.5 2.5 0 1 1 -2.34 3.24"/></svg></div>
+                <span>风<small>丝线飘多大 · 纸被掀起来多深</small></span>
+              </div>
+              <input type="range" data-wind min="0" max="2.4" step="0.1" value="0.7" aria-label="风力">
+            </div>
+          </div></div>
+
+          <!-- 日记本排法（0806）。0805 的注释里写了「设置 › 美化 › 日记本 里切」，
+               但这一行当时没做出来 —— silkDiary() 只有定义没人调，等于切不过去。补上。 -->
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-11a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1m3 0v18"/></svg></div>
+              <span>日记本<small>按「这是什么时候的我」分档，还是一条流水读到底</small></span>
+            </div>
+            <div class="floatpick" id="diarypick">
+              <button data-diary-style="tiered" class="on">分档</button>
+              <button data-diary-style="plain">普通</button>
+            </div>
+          </div>
+          <!-- ★ 风 / 拖动 / 重置线条：用户 silk-home 原件里就有这三个，这里是平移过来的。
+               档位（0~2.4、步长 .1、默认 0.7）和存的键（silk.wind / silk.pos.<排法>）一字未改，
+               只把外壳换成 proto 这边的 .swrow ＋ .floatpick，好跟别的设置项长一样。
+               风这一档丝线三版和纸夹、散摞一起吃；0.7 就是原始设计稿调好的那个手感。
+               这几行现在收在「主页」那一排底下的展开区里，跟着选中的排法展开（applyHome 里）。 -->
+          <!-- 丝线颜色：原始设计稿里就有的六选一，这一版一直没搬。
+               「中性」＝跟着重点色走、只占三成，不跟强调色抢；挑了具体颜色就锁那个。
+               灯串下不生效（那儿的线由灯光定色，原始设计稿里写死的规矩）。 -->
+          <!-- ★ 0805 需求里说的：重点色和丝线颜色是一类东西，别被风和拖动隔开 ——
+               排成上下挨着的两行，而且顺序是「先定重点色，再定线跟不跟它」。 -->
+          <!-- ★ 这里原来是「重点色」色卡（12 个色点 + 色名）。已经删掉：
+               用户只要一种色，固定成「墨」，不再提供切换 —— 见 :root 里 --maple 的注释。
+               ★ 注意下面「丝线颜色」那排**还在**，它跟重点色是两件事。
+                  色表 PALETTE 也留着，丝线那排还在用。 -->
+          <div class="swrow" data-threadrow hidden>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M4 4c0 8 4 12 8 12s8 -4 8 -12"/><path d="M4 20c0 -4 4 -4 8 -4s8 0 8 4"/></svg></div>
+              <span>丝线颜色<small>中性＝跟着重点色走，不占强调色</small></span>
+            </div>
+            <div class="swatches" id="threadsw"></div>
+          </div>
+          <div class="swrow">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="ic" style="margin:0"><svg class="i" viewBox="0 0 24 24"><path d="M5 21c.5 -4.5 2.5 -8 7 -10"/><path d="M9 18c6.218 0 10.5 -3.288 11 -12v-2h-4.014c-9 0 -11.986 4 -12 9c0 1 0 3 2 5h3l.014 0"/></svg></div>
+              <span>漂浮物<small>飘什么 · 落多密 · 飘多快（可以多选）</small></span>
+            </div>
+            <div class="floatpick" id="floatpick"></div>
+            <div class="fltune">
+              <label>密<input type="range" id="floatnum" min="0" max="30" step="1" value="9" aria-label="漂浮物密度"></label>
+              <label>快<input type="range" id="floatspd" min="0.3" max="2.6" step="0.1" value="1" aria-label="漂浮物速度"></label>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+
   <div class="sub" id="histpage">
     <div class="top">
       <button class="iconbtn" data-close="histpage" aria-label="返回">
@@ -6266,28 +6549,9 @@ const PREF = (function(){
   /* ★ 顶栏那条「头像+名字」胶囊已经删掉，这里原来弹「去设置里改」的提示也没了落点。
    想改名字：设置 › 名字 / 头像。 */
 
-  /* 换皮：切一个属性，整页换脸 —— 不用第二个网页（有人问过的那个） */
-  function setSkin(k, quiet){
-    if (k === 'paper') document.documentElement.removeAttribute('data-skin');
-    else document.documentElement.setAttribute('data-skin', k);
-    var sp = document.getElementById('skinpick');
-    if (sp) sp.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x.dataset.k === k); });
-    if (!quiet){
-      /* 换皮会带来自己的重点色，色卡的选中态要跟着复位 */
-      var sw = document.getElementById('swatches');
-      if (sw) sw.querySelectorAll('.sw').forEach(function(s, i){ s.classList.toggle('on', i === 0); });
-      ['--maple','--maple-soft','--tape','--thread','--on-maple'].forEach(function(k2){
-        document.documentElement.style.removeProperty(k2);     /* 换皮＝把重点色那一套全还给新皮 */
-      });
-      PREF.set('accent', null);
-    }
-  }
-  document.getElementById('skinpick').addEventListener('click', function(e){
-    var b = e.target.closest('button'); if (!b) return;
-    setSkin(b.dataset.k);
-    PREF.set('skin', b.dataset.k);
-    toast(b.textContent + '皮 · 整页换了，DOM 一个字没动');
-  });
+  /* ★ setSkin() 和它的按钮已经删掉（只剩一套设计）。
+     顺手把 PREF 里可能残留的 'skin' 键清掉：不然 applySkin 还会去读一个不存在的皮肤名。 */
+  try { PREF.set('skin', null); } catch (e) {}
 
   /* ══ 外观：跟随系统 / 纸 / 夜（0827）══
      跟皮肤正交 —— 皮肤挑的是「哪一套设计」，这儿挑的是「亮还是暗」。
@@ -6342,11 +6606,8 @@ const PREF = (function(){
     ['#6e7946','苔'],     ['#5c7976','蟹壳青'], ['#6b4a3a','栗']
   ];
   (function(){
-    var sw = document.getElementById('swatches');
-    if (sw) sw.innerHTML = PALETTE.map(function(p){
-      return '<button class="sw" data-c="' + p[0] + '" style="background:' + p[0]
-           + ';color:' + p[0] + '" aria-label="' + p[1] + '" title="' + p[1] + '"></button>';
-    }).join('');
+    /* ★ 重点色那排色点已经删了（固定成墨色），这里只生成丝线颜色那一排。
+       PALETTE 这张表两边共用，丝线还在用，别删。 */
     var tw = document.getElementById('threadsw');
     if (tw) tw.innerHTML = '<button class="sw" data-t="auto" aria-label="中性" title="中性 · 跟着重点色走"></button>'
       + PALETTE.map(function(p){
@@ -6379,40 +6640,20 @@ const PREF = (function(){
     r.setProperty('--maple-soft', 'color-mix(in srgb, ' + c + ' 18%, transparent)');
     r.setProperty('--tape',      'color-mix(in srgb, ' + c + ' 18%, transparent)');
     r.setProperty('--thread',    'color-mix(in srgb, ' + c + ' 26%, #ddd2c6)');
-    var sw = document.getElementById('swatches');
-    if (sw) sw.querySelectorAll('.sw').forEach(function(s){ s.classList.toggle('on', s.dataset.c === c); });
-    /* 色块底下写清楚这个色叫什么 —— 0806 逮到的：只看得到颜色、看不到名字 */
-    var swn = document.getElementById('swname');
-    if (swn){
-      var hit = PALETTE.filter(function(p){ return p[0].toLowerCase() === String(c).toLowerCase(); })[0];
-      swn.textContent = hit ? hit[1] : c;
-    }
+    /* 色卡已删（重点色固定墨色），这里原本是给色点刷选中态的 */
+    /* 色名那行（#swname）跟着色卡一起删了，这里原来写的是「这个色叫什么」。 */
     /* 丝线的颜色归丝线那边一个人管 —— 重点色一动就回去问它一次，
        免得这儿设的 --thread 把用户挑的丝线色冲掉一半（0805 实测逮到的） */
     if (window.silkThreadPaint) window.silkThreadPaint();
   }
-  document.getElementById('swatches').addEventListener('click', function(e){
-    var b = e.target.closest('.sw'); if (!b) return;
-    /* ★ 先存后画：setAccent 末尾会回头问丝线那边要颜色，而它读的是 PREF 里的重点色 ——
-       顺序反了就慢一拍，点了新颜色线还是上一个（0805 实测到的）。 */
-    PREF.set('accent', b.dataset.c);
-    setAccent(b.dataset.c);
-  });
   /* 皮肤和重点色也归 PREF 管：用户挑过的，下次进来就该是那个。
      顺序要紧 —— 先铺皮（quiet：别把重点色清掉），再上用户挑的重点色。 */
   function applySkin(){
-    var k = PREF.get('skin', 'paper'), c = PREF.get('accent', null);
-    setSkin(k, true);
-    if (c) setAccent(c);
-    else {
-      /* 用户没换过色 —— 色名那行也得有字，别空着（0806） */
-      var swn = document.getElementById('swname');
-      if (swn && !swn.textContent){
-        var now = (getComputedStyle(document.documentElement).getPropertyValue('--maple') || '').trim();
-        var hit = PALETTE.filter(function(p){ return p[0].toLowerCase() === now.toLowerCase(); })[0];
-        if (hit) swn.textContent = hit[1];
-      }
-    }
+    /* ★ 皮肤没了、重点色也只剩一种：这一趟现在只做清理。
+       · accent 必须清：丝线那边（silkThreadPaint）会读它决定 --thread，不清线色会跟界面对不上
+       · skin 也清掉：那是上一个版本的遗留键 */
+    PREF.set('accent', null);
+    PREF.set('skin', null);
   }
   applySkin();
   PREF.onload(applySkin);
@@ -9995,7 +10236,7 @@ async function loadMem(){
   /* 换皮/换明暗：--maple 和 --ink 都变了，字云得跟着重新配色 */
   new MutationObserver(function(){ setTimeout(tint, 40); })
     .observe(document.documentElement, {attributes: true,
-             attributeFilter: ['data-skin', 'data-theme']});
+             attributeFilter: ['data-theme']});
 })();
 
 
@@ -15316,7 +15557,14 @@ async function loadHome(){
     const goMore = mbody && mbody.querySelector('[data-go="more"]');
     if (goMore) goMore.hidden = !b.length ? true : false;
   }
-  function label(){ btn.innerHTML = W.esc(nice(cur)) + '<span aria-hidden="true"> ▾</span>'; }
+  /* ★ 这个按钮已经搬进「给你俩翻点什么」，做成 图标 + 「换脑子」两个字。
+       所以这里**不再往按钮里写模型名**（用户明确要求不显示）。
+       模型名还是要知道的 —— 摊到 title / aria-label 上，长按能看到，屏幕阅读器也读得到。 */
+  function label(){
+    var n = nice(cur);
+    btn.title = '当前：' + n;
+    btn.setAttribute('aria-label', '换个脑子，当前 ' + n);
+  }
 
   function drawThink(){
     /* 主页那行入口右边直接显示当前是哪一档 —— 不用点进去就知道 */
@@ -15382,7 +15630,14 @@ async function loadHome(){
     scrim.classList.toggle('on', v);
     if (v){ setView('main'); load(); }        /* 每次打开都从主页起 */
   }
-  btn.addEventListener('click', function(e){ e.stopPropagation(); open(true); });
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    /* ★ 它现在住在「给你俩翻点什么」里面。点它得先把那张面板收起来，
+       不然换脑子的 sheet 会叠在它上面，关掉之后还能看见底下那张。 */
+    var ps = document.getElementById('plussheet'), pc = document.getElementById('plusclose');
+    if (ps && ps.style.transform && pc) pc.click();
+    open(true);
+  });
   scrim.addEventListener('click', () => open(false));
   /* 那颗按钮身兼两职：主页＝关掉，二级页＝退回主页 */
   if (back) back.addEventListener('click', function(){
@@ -17480,5 +17735,415 @@ window._kmMount = function(){
       mp.setLyrics((lrc || []).map(x => ({t: x.t, text: x.txt || x.text || ''})));
     },
   };
+})();
+</script>
+
+<script>
+/* ══ 底栏的液态玻璃镜片 ══════════════════════════════════════════
+   参考 jqzhang921-sudo/cleos 的 GlassTabBar（Apache-2.0）。
+   独立成一段脚本：它只碰 .tabbar，跟别的模块没有耦合，写坏了也拖不垮整页。
+
+   手感照它的数值来：
+     · 按住时镜片跑到手指底下，宽度 86% → 114%，高度 46 → 56
+     · 拖动时按速度拉长（|v| × 0.012，上限格宽 28%），同时压扁（× 0.3）
+     · 松手用临界阻尼弹簧（ω=32）落到最近的格子 —— 帧率无关，掉帧也不会飞
+
+   ★ 没有做真折射（那要 shader 采样背景）。这里靠 backdrop-filter 近似，
+     不假装做到了。
+   ★ 没用手势捕获（setPointerCapture）：它会把 pointerup 抢到底栏上，
+     结果 tab 自己的 click 收不到，点一下切不了页。改成拖的时候临时在 window 上
+     听 move/up —— 拖出底栏也接得住，点击行为一点不受影响。
+*/
+(function(){
+  'use strict';
+  var bar = document.querySelector('.tabbar');
+  if (!bar) return;
+  var lens = bar.querySelector('.tablens');
+  var tabs = [].slice.call(bar.querySelectorAll('.tab[data-go]'));
+  var leaf = bar.querySelector('.leaf');
+  if (!lens || !tabs.length) return;
+
+  var calm = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  var pos = 0, vel = 0, goal = 0;        /* 镜片左端位置（相对底栏） */
+  var press = 0, pressGoal = 0;          /* 按下程度 0~1 */
+  var stretch = 0;                       /* 被拉长的量 */
+  var idx = 0;
+  var running = false;
+
+  var dragging = false, moved = false, pid = null;
+  var downX = 0, downY = 0, lastX = 0, lastT = 0, speed = 0;
+  var swallowClick = false, selfClick = false;
+
+  function boxOf(i){
+    var r = tabs[i].getBoundingClientRect(), b = bar.getBoundingClientRect();
+    return { left: r.left - b.left, width: r.width };
+  }
+  function itemW(i){ return boxOf(i).width; }
+  function lensW(i, pr, st){ return itemW(i) * (0.86 + 0.28 * pr) + st; }
+  function lensH(pr, st){ return 46 + 10 * pr - st * 0.3; }
+  function goalFor(i){
+    var b = boxOf(i);
+    return b.left + (b.width - lensW(i, 0, 0)) / 2;
+  }
+  function selected(){
+    for (var i = 0; i < tabs.length; i++) if (tabs[i].classList.contains('on')) return i;
+    return -1;
+  }
+
+  function paint(){
+    lens.style.width = lensW(idx, press, stretch).toFixed(1) + 'px';
+    lens.style.height = lensH(press, stretch).toFixed(1) + 'px';
+    lens.style.transform = 'translate3d(' + pos.toFixed(1) + 'px,-50%,0)';
+  }
+
+  /* 临界阻尼弹簧的一次积分（照 TabDragMotion.follow：帧率无关，掉帧也不会失控） */
+  function integrate(dt){
+    var omega = 32, d = pos - goal, c = vel + omega * d, decay = Math.exp(-omega * dt);
+    pos = goal + (d + c * dt) * decay;
+    vel = (vel - omega * c * dt) * decay;
+  }
+
+  function frame(){
+    if (dragging){
+      var want = Math.min(Math.abs(speed) * 0.012, itemW(idx) * 0.28);
+      stretch += (want - stretch) * 0.35;
+      speed *= 0.86;
+    } else {
+      integrate(1 / 60);
+      stretch *= 0.82;
+      if (Math.abs(pos - goal) < 0.3 && Math.abs(vel) < 0.5){ pos = goal; vel = 0; }
+      if (Math.abs(stretch) < 0.05) stretch = 0;
+    }
+    press += (pressGoal - press) * 0.22;
+    if (Math.abs(pressGoal - press) < 0.002) press = pressGoal;
+    paint();
+
+    var settled = !dragging && pos === goal && vel === 0 && stretch === 0 && press === pressGoal;
+    if (settled){ running = false; return; }
+    requestAnimationFrame(frame);
+  }
+  function kick(){ if (!running){ running = true; requestAnimationFrame(frame); } }
+
+  function syncToSelection(animate){
+    var k = selected();
+    if (k < 0){ bar.classList.add('atleaf'); paint(); return; }   /* 选中中间那片叶子 → 镜片让位 */
+    bar.classList.remove('atleaf');
+    idx = k;
+    goal = goalFor(idx);
+    if (!animate || calm){ pos = goal; vel = 0; stretch = 0; press = 0; pressGoal = 0; paint(); }
+    else kick();
+  }
+
+  /* ── 按下：镜片跑过来、鼓起 ── */
+  bar.addEventListener('pointerdown', function(e){
+    if (e.button != null && e.button !== 0) return;
+    var k = selected();
+    if (k >= 0) idx = k;
+    dragging = true; moved = false; pid = e.pointerId;
+    downX = e.clientX; downY = e.clientY;
+    lastX = e.clientX; lastT = performance.now(); speed = 0;
+    pressGoal = 1;
+    goal = (e.clientX - bar.getBoundingClientRect().left) - lensW(idx, 1, 0) / 2;
+    window.addEventListener('pointermove', onMove, {passive: true});
+    window.addEventListener('pointerup', onUp, {passive: true});
+    window.addEventListener('pointercancel', onUp, {passive: true});
+    kick();
+  }, {passive: true});
+
+  function onMove(e){
+    if (!dragging || e.pointerId !== pid) return;
+    var dx = e.clientX - downX, dy = e.clientY - downY;
+    if (!moved){
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;      /* 手抖不算拖 */
+      if (Math.abs(dx) <= Math.abs(dy)){                     /* 竖着划 → 让给页面滚动 */
+        stop(); return;
+      }
+    }
+    moved = true;
+    var now = performance.now(), dt = Math.max(1, now - lastT);
+    speed = (e.clientX - lastX) / dt * 16;                    /* 折算成 px/帧 */
+    lastX = e.clientX; lastT = now;
+    goal = (e.clientX - bar.getBoundingClientRect().left) - lensW(idx, 1, stretch) / 2;
+    pos = goal;                                               /* 拖动时严丝合缝跟手 */
+    kick();
+  }
+
+  function stop(){
+    dragging = false; pid = null; pressGoal = 0;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+  }
+
+  function onUp(e){
+    if (!dragging) return;
+    var wasMoved = moved;
+    stop();
+    if (!wasMoved){ kick(); return; }          /* 只是点了一下，交给 tab 自己的 click */
+
+    /* 落点：镜片中心离哪个格子中心最近 */
+    var center = pos + lensW(idx, 1, stretch) / 2;
+    var best = 0, bestD = 1e9;
+    for (var i = 0; i < tabs.length; i++){
+      var bx = boxOf(i), c = bx.left + bx.width / 2, d = Math.abs(center - c);
+      if (d < bestD){ bestD = d; best = i; }
+    }
+    swallowClick = true;                        /* 拖完那一下别再当成点了某个 tab */
+    setTimeout(function(){ swallowClick = false; }, 400);
+    idx = best;
+    goal = goalFor(best);
+    kick();
+    /* ★ selfClick 这个夹子非要不可：tabs[best].click() 是**同步**派发的，
+       会立刻经过下面那个捕获阶段的拦截器 —— 不放行的话，拖完根本切不了页。 */
+    selfClick = true;
+    tabs[best].click();
+    selfClick = false;
+  }
+
+  /* 拖完浏览器还会补一个 click —— 拦掉，否则会连切两次 */
+  bar.addEventListener('click', function(e){
+    if (selfClick) return;                      /* 程序自己触发的那次，放行 */
+    if (!swallowClick) return;
+    e.preventDefault(); e.stopPropagation();
+  }, true);
+
+  /* 选中项变了（点 tab、点叶子、代码里 go()）→ 镜片跟着走 */
+  var mo = new MutationObserver(function(){ syncToSelection(true); });
+  tabs.forEach(function(t){ mo.observe(t, {attributes: true, attributeFilter: ['class']}); });
+  if (leaf) mo.observe(leaf, {attributes: true, attributeFilter: ['class']});
+
+  /* 旋屏、窗口缩放要重算 */
+  if (window.ResizeObserver){
+    new ResizeObserver(function(){ if (!dragging) syncToSelection(false); }).observe(bar);
+  }
+
+  syncToSelection(false);
+  window.__tablensSync = function(){ syncToSelection(false); };
+  /* 页面从隐藏再回来时，尺寸可能变过（WebView 里常见），补一次 */
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) syncToSelection(false);
+  });
+})();
+</script>
+
+<script>
+/* ══ 聊天背景图 ══════════════════════════════════════════════════
+   选图 → 限到 1080 宽 → 传上去 → 把 URL 存进 config.ui.chatbg。
+   存 config 而不是 localStorage：换个设备/重装后导备份，背景跟着走。
+   ★ 只在聊天页显示：靠观察 #p-chat 的 class 变化（go() 切页时加/去 .on）。
+     不用 CSS :has()，因为老 WebView 可能不认，背景会永远看不见。
+*/
+(function(){
+  'use strict';
+  var layer = document.getElementById('chatbg');
+  if (!layer) return;
+  var pick = document.getElementById('chatbg-pick');
+  var clr  = document.getElementById('chatbg-clear');
+  var file = document.getElementById('chatbg-file');
+  var chatPage = document.getElementById('p-chat');
+  var cur = '';
+
+  function sync(){
+    var on = !!(chatPage && chatPage.classList.contains('on'));
+    layer.classList.toggle('on', on && !!cur);
+  }
+  window.__chatbgSync = sync;             /* 切页那边如果愿意可以直接喊一声 */
+
+  function apply(u){
+    cur = u || '';
+    layer.style.backgroundImage = cur ? 'url("' + cur.replace(/"/g, '%22') + '")' : '';
+    if (clr) clr.hidden = !cur;
+    if (pick) pick.textContent = cur ? '换一张' : '选图';
+    sync();
+  }
+
+  function save(u){
+    return call('config', {method: 'POST', body: {ui: {chatbg: u || ''}}, fallback: null});
+  }
+
+  call('config', {fallback: null}).then(function(c){
+    apply((c && c.ui && c.ui.chatbg) || '');
+  }).catch(function(){});
+
+  if (chatPage && window.MutationObserver){
+    new MutationObserver(sync).observe(chatPage, {attributes: true, attributeFilter: ['class']});
+  }
+
+  if (pick && file) pick.addEventListener('click', function(){ file.click(); });
+
+  if (file) file.addEventListener('change', function(){
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    if (f.size > 20 * 1024 * 1024){
+      if (window.toast) window.toast('这张 ' + (f.size / 1048576).toFixed(1) + 'MB，太大了');
+      return;
+    }
+    var fr = new FileReader();
+    fr.onload = function(){
+      var im = new Image();
+      im.onload = function(){
+        /* 背景不用缩到 512 那么小，但也别把原图塞进配置：限到 1080 宽 */
+        var cap = 1080, sc = Math.min(1, cap / im.width);
+        var w = Math.max(1, Math.round(im.width * sc)), h = Math.max(1, Math.round(im.height * sc));
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(im, 0, 0, w, h);
+        var small = cv.toDataURL('image/jpeg', 0.82);
+        if (pick) pick.textContent = '在传…';
+        call('upload', {method: 'POST', body: {dataURL: small}, fallback: null}).then(function(up){
+          if (!up || !up.url){
+            if (pick) pick.textContent = '选图';
+            if (window.toast) window.toast('没传上去，再试一次？');
+            return;
+          }
+          save(up.url).then(function(r){
+            apply(up.url);
+            if (window.toast) window.toast(r && r.ok !== false ? '换好了' : '图传上去了，但没存进配置');
+          });
+        }).catch(function(){
+          if (pick) pick.textContent = '选图';
+          if (window.toast) window.toast('出错了，再试一次？');
+        });
+      };
+      im.onerror = function(){ if (window.toast) window.toast('这张图打不开，换一张？'); };
+      im.src = fr.result;
+    };
+    fr.onerror = function(){ if (window.toast) window.toast('读不出来，换一张？'); };
+    fr.readAsDataURL(f);
+  });
+
+  if (clr) clr.addEventListener('click', function(){
+    save('').then(function(r){
+      apply('');
+      if (window.toast) window.toast(r && r.ok !== false ? '背景去掉了' : '没存上');
+    });
+  });
+})();
+</script>
+
+<script>
+/* ══ 气泡搭配：材质 + 两个颜色 ══════════════════════════════════
+   存 config.ui.bub = { mat:'plain'|'glass', me:'#rrggbb'|'', ai:'#rrggbb'|'' }
+   ★ me / ai 留空 = 跟着主题走（浅色 #424242 / #BDBDBD，深色另有值）。
+     一旦用户挑了色，就写死成内联变量，不再随明暗变 —— 这是用户明确要的。
+   ★ 字色不存：每次按气泡底色算对比度，自动给黑或白（inkFor）。
+*/
+(function(){
+  'use strict';
+  var root = document.documentElement;
+  var pick = document.getElementById('bubmat');
+  var meIn = document.getElementById('bub-me');
+  var aiIn = document.getElementById('bub-ai');
+  var meHex = document.getElementById('bub-me-hex');
+  var aiHex = document.getElementById('bub-ai-hex');
+  var miHex = document.getElementById('bub-meink-hex');
+  var aiInkHex = document.getElementById('bub-aiink-hex');
+  var meInkIn = document.getElementById('bub-meink');
+  var aiInkIn = document.getElementById('bub-aiink');
+  if (!pick) return;
+
+  var DEF_ME = '#424242', DEF_AI = '#BDBDBD';
+  var cur = {mat: 'plain', me: '', ai: '', meInk: '', aiInk: ''};
+
+  /* 这个色上面该用黑字还是白字 —— 谁对比度高用谁（跟设置里那个重点色同一套算法） */
+  function inkFor(hex){
+    var m = String(hex || '').replace('#', '');
+    if (m.length === 3) m = m[0]+m[0]+m[1]+m[1]+m[2]+m[2];
+    if (m.length !== 6) return '#FFFFFF';
+    var v = [0, 2, 4].map(function(i){
+      var x = parseInt(m.substr(i, 2), 16) / 255;
+      return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+    });
+    var L = 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+    return (1.05 / (L + 0.05)) >= ((L + 0.05) / 0.071) ? '#FFFFFF' : '#000000';
+  }
+
+  function apply(c){
+    cur = c = c || cur;
+    root.setAttribute('data-bub-mat', c.mat === 'glass' ? 'glass' : 'plain');
+    /* 四个通道：两个气泡底 + 两个文字色。
+       文字色：用户指定优先 → 没指定就按气泡底自动算 → 气泡底也没自定义就整个不设，交给 CSS 主题默认。 */
+    function put(name, v){
+      if (v) root.style.setProperty(name, v); else root.style.removeProperty(name);
+    }
+    put('--bub-me', c.me);
+    put('--bub-ai', c.ai);
+    put('--bub-me-ink', c.meInk || (c.me ? inkFor(c.me) : ''));
+    put('--bub-ai-ink', c.aiInk || (c.ai ? inkFor(c.ai) : ''));
+
+    if (pick) pick.querySelectorAll('button').forEach(function(b){
+      b.classList.toggle('on', (b.dataset.mat || 'plain') === (c.mat === 'glass' ? 'glass' : 'plain'));
+    });
+    if (meIn) meIn.value = c.me || DEF_ME;
+    if (aiIn) aiIn.value = c.ai || DEF_AI;
+    /* ★ 正在那个输入框里打字时别回写 —— 会把光标顶到末尾，输一半的值也被改写 */
+    if (meHex && document.activeElement !== meHex) meHex.value = c.me || DEF_ME;
+    if (aiHex && document.activeElement !== aiHex) aiHex.value = c.ai || DEF_AI;
+    if (miHex && document.activeElement !== miHex) miHex.value = c.meInk || inkFor(c.me || DEF_ME);
+    if (aiInkHex && document.activeElement !== aiInkHex) aiInkHex.value = c.aiInk || inkFor(c.ai || DEF_AI);
+    if (meInkIn) meInkIn.value = c.meInk || inkFor(c.me || DEF_ME);
+    if (aiInkIn) aiInkIn.value = c.aiInk || inkFor(c.ai || DEF_AI);
+  }
+
+  function save(){
+    return call('config', {method: 'POST', body: {ui: {bub: cur}}, fallback: null});
+  }
+
+  /* 防抖：拖颜色选择器时别每动一下都发一个请求 */
+  var t = 0;
+  function saveSoon(){ clearTimeout(t); t = setTimeout(save, 500); }
+
+  if (pick) pick.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    cur.mat = b.dataset.mat === 'glass' ? 'glass' : 'plain';
+    apply(cur); save();
+  });
+
+  /* 把用户敲的东西规整成 #rrggbb。
+     接受 424242 / #424242 / #fff / #FFF 这几种写法；敲到一半不完整的返回 null，先不应用。 */
+  function normHex(v){
+    v = String(v || '').trim().replace(/^#/, '');
+    if (/^[0-9a-fA-F]{3}$/.test(v)) v = v[0]+v[0]+v[1]+v[1]+v[2]+v[2];
+    if (!/^[0-9a-fA-F]{6}$/.test(v)) return null;
+    return '#' + v.toLowerCase();
+  }
+
+  if (meIn) meIn.addEventListener('input', function(){
+    cur.me = this.value;
+    if (meHex) meHex.value = this.value;
+    apply(cur); saveSoon();
+  });
+  if (aiIn) aiIn.addEventListener('input', function(){
+    cur.ai = this.value;
+    if (aiHex) aiHex.value = this.value;
+    apply(cur); saveSoon();
+  });
+
+  /* 通用绑定：一个色号输入框 + 一个圆形色卡，对应 cur 里的一个键 */
+  function bindPair(hexEl, colEl, key, def){
+    if (hexEl) hexEl.addEventListener('input', function(){
+      var v = normHex(this.value); if (!v) return;
+      cur[key] = v; apply(cur); saveSoon();
+    });
+    if (hexEl) hexEl.addEventListener('blur', function(){ this.value = cur[key] || def; });
+    if (colEl) colEl.addEventListener('input', function(){
+      cur[key] = this.value;
+      if (hexEl) hexEl.value = this.value;
+      apply(cur); saveSoon();
+    });
+  }
+  bindPair(meHex,    meIn,     'me',    DEF_ME);
+  bindPair(aiHex,    aiIn,     'ai',    DEF_AI);
+  bindPair(miHex,    meInkIn,  'meInk', '#FFFFFF');
+  bindPair(aiInkHex, aiInkIn,  'aiInk', '#000000');
+
+
+  call('config', {fallback: null}).then(function(c){
+    var b = (c && c.ui && c.ui.bub) || {};
+    apply({mat: b.mat === 'glass' ? 'glass' : 'plain',
+           me: b.me || '', ai: b.ai || '',
+           meInk: b.meInk || '', aiInk: b.aiInk || ''});
+  }).catch(function(){ apply(cur); });
 })();
 </script>
