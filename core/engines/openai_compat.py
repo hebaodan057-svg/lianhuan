@@ -174,7 +174,19 @@ class OpenAICompatEngine(Engine):
         if turn.system:
             msgs.append({"role": "system", "content": turn.system})
         msgs += [m for m in (turn.history or []) if m.get("content")]
-        msgs.append({"role": "user", "content": turn.message})
+        # ★ 多模态：对方发了图就把 content 从字符串换成数组
+        #   [{"type":"text","text":...}, {"type":"image_url","image_url":{"url":"data:..."}}]
+        #   没图走 else，**一个字不改** —— 新功能不许动老逻辑。
+        #   文字必须放第一位：图在前有些模型会先描述图再跑偏。
+        _imgs = list(getattr(turn, "images", None) or [])
+        _parts = [{"type": "text", "text": turn.message}] if _imgs else []
+        for _u in _imgs:
+            if isinstance(_u, str) and _u.startswith("data:"):
+                _parts.append({"type": "image_url", "image_url": {"url": _u}})
+        if len(_parts) > 1:
+            msgs.append({"role": "user", "content": _parts})
+        else:
+            msgs.append({"role": "user", "content": turn.message})
 
         feed = self._feeder()
         said = False

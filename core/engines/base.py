@@ -26,6 +26,9 @@ class Turn:
     system: str = ""                   # 人设 ＋ 召回出来的记忆，拼好的
     history: list[dict] = field(default_factory=list)   # [{"role": "user"|"assistant", "content": str}]
     session_id: str | None = None      # 有的引擎能续会话（CLI 的 --resume），没有就留空
+    # ★ 对方发来的图，形如 data:image/jpeg;base64,...（只收这种内联形式）。
+    #   默认空列表 —— 所有老调用路径不传 images 也照常工作，一个字不受影响。
+    images: list[str] = field(default_factory=list)
 
 
 class Engine:

@@ -4136,8 +4136,12 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline-offset:1
         <p style="margin:6px 0 10px;font-size:12.5px;line-height:1.75;color:var(--sub)">登记一条 MCP server，AI 就长出它的工具（钓鱼小游戏、日历、任何 stdio server）。跟 Claude 的 .mcp.json 同一个格式，现成配置直接抄。<b>命令会以你的身份运行 —— 只贴你信得过的。</b></p>
         <div id="mcplist" style="margin:0 0 10px"></div>
         <div style="display:grid;gap:8px">
-          <input id="mcpname" placeholder="名字，如 fish" style="min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--ink);font:inherit;font-size:13px">
-          <input id="mcpcmd" placeholder="启动命令，如 npx some-mcp-server 或 python3 /path/server.py" style="min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--ink);font:inherit;font-size:13px">
+<input id="mcpname" placeholder="名字，如 leto"
+              style="min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--ink);font:inherit;font-size:13px">
+          <input id="mcpcmd" placeholder="地址 https://host/mcp，或启动命令 npx xxx"
+              style="min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--ink);font:inherit;font-size:13px">
+          <input id="mcptoken" placeholder="Token（远程服务才要，填 xxx 自动补 Bearer）"
+              style="min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--ink);font:inherit;font-size:13px">
           <button class="pkbtn" id="mcpadd">登记并连上</button>
           <small id="mcpmsg" style="color:var(--hint)"></small>
         </div>
@@ -7082,6 +7086,11 @@ const EP = {
   config     : '/api/config',                /* 名字 / 签名 / 开场白 / 头像 —— 后端 0805 改成合并写了 */
   prefs      : '/api/prefs',                 /* 外观偏好，见文件最上面那段 PREF */
   theme      : '/api/theme',
+   /* 外部服务（MCP）：接上之后 TA 就能用那些服务的工具 */
+   mcp        : '/api/mcp',                   /* GET → {servers:[{name,type,url,ok,err,tools,enabled}]} */
+   mcpAdd     : '/api/mcp/add',               /* POST {name, endpoint|command, token, headers} */
+   mcpToggle  : '/api/mcp/toggle',            /* POST {name, on} */
+   mcpDel     : '/api/mcp/del',               /* POST {name} */
 };
 
 /* 统一出入口：超时、登录失效、失败兜底都在这一处认。
@@ -7503,7 +7512,9 @@ const CHAT = (function(){
     async send(text, extra, opts){
       if (liveSt) return false;
       const msg = String(text || '').trim();
-      if (!msg) return false;
+      /* 只发图不说话也要放行（后端那边同样放行并补一句占位）。 */
+      const hasImg = !!(extra && extra.images && extra.images.length);
+      if (!msg && !hasImg) return false;
       SLOT = (opts && opts.sess) || '';        /* 这一轮走哪条线（''＝文字，'call'＝打电话） */
       const st = {seen: 0, job: null, os: '', said: [], first: true,
                   done: null, gone: false, stopped: false};
@@ -8469,18 +8480,25 @@ const _TL_NAME = {
 
 async function loadDiary(){
   if (_diary) return _diary;                 /* 一次取齐，两种排法共用这一份 */
+  /* ★ 原来用 Promise.all：只要有一路抛错（不是返回 fallback，而是真抛），
+     整个 loadDiary 就 reject，out 一条都拿不到 —— 页面显示「还没写过」，
+     哪怕日记表里明明有内容。三路各取各的，谁挂了不拖累另外两个。 */
   const [d, tl, nt] = await Promise.all([
-    call('diary',    {query: {who: 'ai'},              fallback: {items: []}}),
-    call('timeline', {query: {limit: 200},                   fallback: {items: []}}),
-    call('notes',    {query: {limit: 1000, dropped: 'hide'}, fallback: {items: []}}),
+    call('diary',    {query: {who: 'ai'},                    fallback: {items: []}}).catch(() => null),
+    call('timeline', {query: {limit: 200},                   fallback: {items: []}}).catch(() => null),
+    call('notes',    {query: {limit: 1000, dropped: 'hide'}, fallback: {items: []}}).catch(() => null),
   ]);
   const out = [];
   ((d && d.items) || []).forEach(x => {
     const dream = x.kind === 'dream';
-    out.push({day: x.day || '', t: x.t || '',
+    /* ★ 字段名以**后端**为准：/api/diary 给的是 tmin / context_text，
+       这里原来写的是 x.t / x.ctx，两边对不上 —— 条目能出来但时间是空的、
+       上下文也丢了。两个名字都认，后端以后改也不至于又断一次。 */
+    out.push({day: x.day || '', t: x.tmin || x.t || '',
       lane: dream ? '夜里' : '跟你之后',
-      name: dream ? '梦' : (x.mood ? '心情 · ' + x.mood : '心情'),
-      text: x.content || '', ctx: x.ctx || '', cls: dream ? 'dream' : ''});
+      name: dream ? '梦' : (x.mood ? '心情 · ' + x.mood : '日记'),
+      text: x.content || '', ctx: x.context_text || x.ctx || '',
+      cls: dream ? 'dream' : ''});
   });
   ((tl && tl.items) || []).forEach(x => {
     const alone = _TL_ALONE.indexOf(x.kind) >= 0;
@@ -8654,7 +8672,15 @@ window.__dropDataCache = function(){
 
   async function load(){
     all = await loadDiary();
-    if (!all.length){ list.innerHTML = '<p class="dnone">还没写过。</p>'; return; }
+    /* ★ 取到空要把 loaded 放回去，下次点开还能再试。
+       原来越取越空也把 loaded 焊成 true —— 第一次碰上后端还没热起来，
+       这本子就永远显示「还没写过」，刷新都救不回来。 */
+    if (!all.length){
+      loaded = false;
+      _diary = null;                          /* 缓存也清掉，别把这次的空结果留着 */
+      list.innerHTML = '<p class="dnone">还没写过。</p>';
+      return;
+    }
     paint();
     paintHer();      /* 隐藏那版也一起填 —— 用户切过去就是真数据，不用再取一次（主页三版同一条规矩） */
   }
@@ -14556,7 +14582,10 @@ setTimeout(loadAva, 0);
         setTimeout(() => setStat(''), 3200);
         return null;                          /* 一样失败＝整批不发，暂存原样留着 */
       }
-      out.push({kind: s.kind, url: d.url, path: d.path, name: d.name || s.name});
+      /* ★ 保留 dataURL：后端要靠它把图拼成 image_url 交给视觉模型。
+         原来只留 url/path —— 图的数据在这一步就丢了，模型永远看不见像素。 */
+      out.push({kind: s.kind, url: d.url, path: d.path,
+                name: d.name || s.name, dataURL: s.dataURL});
     }
     stageClear();
     return out;
@@ -14715,7 +14744,12 @@ setTimeout(loadAva, 0);
       /* 0906 引用：拼成正文第一行一起发走，发不出去就把泡泡还回来（别让人重挑一遍） */
       const _q1 = window.takeChatQuote && window.takeChatQuote();
       const _b1 = (t ? (note + '\n' + t) : note) + shotMark;
-      CHAT.send(quoteMark(_q1) + _b1, {voice_feel: takeFeel()}, {echo: false})
+      /* ★ 把图的 dataURL 一起递过去 —— 后端据此拼成 image_url，
+         视觉模型才真的看得见。只给 path 的话它只能 Read，而 Read 不交像素。 */
+      CHAT.send(quoteMark(_q1) + _b1,
+                {voice_feel: takeFeel(),
+                 images: imgs.map(function(u){ return u.dataURL; }).filter(Boolean)},
+                {echo: false})
         .then(function(ok){ if (!ok && _q1 && window.putChatQuote) window.putChatQuote(_q1); });
       return;
     }
@@ -17446,11 +17480,34 @@ async function loadHome(){
       var box = document.getElementById('mcplist');
       if (!box) return;
       var svs = d.servers || [];
+      /* ★ 每行给三样：状态点 + 名字/地址 + 开关键 + 删。
+         关掉的也要列出来 —— 「关着」和「不存在」是两件事，
+         只列连上的话，一关就找不到它、也没法再打开。 */
       box.innerHTML = svs.length ? svs.map(function(s){
-        return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line)">'
-          + '<b style="font-size:13px">' + esc(s.name) + '</b>'
-          + '<small style="color:var(--hint);flex:1">' + (s.ok ? (s.tools.length + ' 个工具：' + s.tools.slice(0,4).join('、') + (s.tools.length>4?'…':'')) : ('没连上：' + esc(s.err||''))) + '</small>'
-          + '<button class="pkbtn" style="min-height:32px;padding:0 10px" data-mcp-del="' + esc(s.name) + '">删</button></div>';
+        var on = s.enabled !== false;
+        var dot = on ? (s.ok ? 'var(--maple)' : 'var(--hint)') : 'var(--hint)';
+        var info = on
+          ? (s.ok ? (s.tools.length + ' 个工具：' + s.tools.slice(0,3).join('、') + (s.tools.length>3?'…':''))
+                  : ('没连上：' + esc(s.err||'')))
+          : '已关闭';
+        return '<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px dashed var(--line)">'
+          + '<span style="width:7px;height:7px;border-radius:50%;flex:none;background:' + dot + '"></span>'
+          + '<div style="flex:1;min-width:0">'
+          +   '<b style="font-size:13px">' + esc(s.name)
+          +     (s.type === 'http' ? '<i style="font-style:normal;color:var(--hint);font-size:10.5px;margin-left:5px">远程</i>' : '')
+          +   '</b>'
+          +   '<div style="color:var(--hint);font-size:11px;line-height:1.45;word-break:break-all">'
+          +     esc(s.url || '') + '</div>'
+          +   '<div style="color:var(--sub);font-size:11.5px;line-height:1.45">' + info + '</div>'
+          + '</div>'
+          + '<button style="flex:none;position:relative;width:44px;height:26px;border-radius:13px;border:1px solid var(--line);'
+          +   'background:' + (on ? 'var(--maple)' : 'var(--card2)') + ';cursor:pointer;padding:0"'
+          +   ' data-mcp-toggle="' + esc(s.name) + '" data-on="' + (on ? '1' : '0') + '">'
+          +   '<span style="position:absolute;top:3px;left:' + (on ? '21px' : '3px')
+          +     ';width:18px;height:18px;border-radius:50%;background:#fff;transition:left .18s"></span>'
+          + '</button>'
+          + '<button class="pkbtn" style="flex:none;min-height:32px;padding:0 9px;font-size:12px" data-mcp-del="' + esc(s.name) + '">删</button>'
+          + '</div>';
       }).join('') : '<small style="color:var(--hint)">还没登记过。</small>';
     }).catch(function(){});
     var proto = document.getElementById('engproto');
@@ -17511,9 +17568,15 @@ async function loadHome(){
       ma.addEventListener('click', function(){
         var msg = document.getElementById('mcpmsg');
         ma.disabled = true; ma.textContent = '连着…';
+        /* ★ 一个输入框收两样：以 http 开头当远程地址，否则当启动命令。
+           用户心智里就是「填个地址」，不该让他先选类型。 */
+        var _u = (document.getElementById('mcpcmd').value || '').trim();
+        var _t = document.getElementById('mcptoken');
+        var _body = {name: document.getElementById('mcpname').value};
+        if (/^https?:\/\//i.test(_u)) _body.endpoint = _u; else _body.command = _u;
+        if (_t && _t.value.trim()) _body.token = _t.value.trim();
         fetch('/api/mcp/add', {method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({name: document.getElementById('mcpname').value,
-                                command: document.getElementById('mcpcmd').value})})
+          body: JSON.stringify(_body)})
           .then(function(r){return r.json();})
           .then(function(d){
             ma.disabled = false; ma.textContent = '登记并连上';
@@ -17523,6 +17586,16 @@ async function loadHome(){
           });
       });
       document.addEventListener('click', function(e){
+        var tg = e.target.closest && e.target.closest('[data-mcp-toggle]');
+        if (tg){
+          var nm = tg.getAttribute('data-mcp-toggle');
+          var on = tg.getAttribute('data-on') !== '1';
+          tg.setAttribute('data-on', on ? '1' : '0');       /* 先动，别等网络 */
+          fetch('/api/mcp/toggle', {method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({name: nm, on: on})}).then(function(){ load(); })
+            .catch(function(){ tg.setAttribute('data-on', on ? '0' : '1'); });
+          return;
+        }
         var del = e.target.closest && e.target.closest('[data-mcp-del]');
         if (!del) return;
         fetch('/api/mcp/del', {method:'POST', headers:{'Content-Type':'application/json'},
@@ -18741,5 +18814,8 @@ window.declareP = declareP;
   }, 400);
 })();
 </script>
+
+
+
 
 

@@ -338,8 +338,15 @@ def android_hello():
 async def chat(req: Request):
     body = await req.json()
     msg = (body.get("message") or "").strip()
-    if not msg:
+    # ★ 多模态：对方可能只发图不说话。只收 data: 开头的内联图 ——
+    #   模型那边要 base64 内联，URL 它读不到（/uploads 要登录，外网也访问不了）。
+    images = [x for x in (body.get("images") or [])
+              if isinstance(x, str) and x.startswith("data:")]
+    if not msg and not images:
         return JSONResponse({"error": "说点什么吧"}, status_code=400)
+    if not msg and images:
+        # 补一句占位：模型收到空字符串＋图时不知道该怎么接
+        msg = "（对方发来一张图，没说话）"
     session_id = body.get("session_id") or None
     # ★ 0831 自查：电话和文字共用一张表，但**不共用上下文**。
     #   前端打电话时带 src='call' ＋ 每通一个 call_id；后端原来这两个字段**看都没看**，
@@ -389,7 +396,8 @@ async def chat(req: Request):
     if msg.startswith("▎引用"):
         msg_for_engine += ("\n〔上面第一行 ▎ 开头的那句是**引用**的原话,不是这会儿说的。"
                            "下面这句是冲着那一句来的,先对准它再回,别当成新起的话头。〕")
-    turn = EngineTurn(message=msg_for_engine, system=system, history=history, session_id=session_id)
+    turn = EngineTurn(message=msg_for_engine, system=system, history=history,
+                      session_id=session_id, images=images)
 
     job = jobs.new(msg)
     gen_at_start = getattr(store, "generation", 0)      # 这一轮开始时的档案世代
@@ -1357,14 +1365,41 @@ async def api_mcp_add(req: Request):
     界面上要把这句风险写在输入框边上。AI 没有这个权限。"""
     b = await req.json()
     name = re.sub(r"[^\w-]", "", (b.get("name") or ""))[:24]
+    if not name:
+        return JSONResponse({"ok": False, "error": "得给个名字"}, status_code=400)
+
+    endpoint = (b.get("endpoint") or "").strip()
     cmdline = (b.get("command") or "").strip()
-    if not name or not cmdline:
-        return JSONResponse({"ok": False, "error": "名字和命令都要"}, status_code=400)
-    parts = cmdline.split()
-    _mcp.save_server(name, parts[0], parts[1:], b.get("env") or {})
+    if not endpoint and not cmdline:
+        return JSONResponse({"ok": False, "error": "地址和命令至少给一个"}, status_code=400)
+
+    # token 的容错：填 `xxx` 自动补 Bearer，填 `Bearer xxx` 原样用。
+    # 不同地方抄来的 token 格式不一样，替用户补这一步。
+    headers = dict(b.get("headers") or {})
+    token = (b.get("token") or "").strip()
+    if token:
+        headers["Authorization"] = token if " " in token else f"Bearer {token}"
+
+    if endpoint:
+        _mcp.save_server(name, endpoint=endpoint, headers=headers)
+    else:
+        parts = cmdline.split()
+        _mcp.save_server(name, parts[0], parts[1:], b.get("env") or {})
     await _mcp.start_all()
     st = next((x for x in _mcp.status() if x["name"] == name), None)
     return {"ok": bool(st and st["ok"]), "server": st}
+
+
+@app.post("/api/mcp/toggle")
+async def api_mcp_toggle(req: Request):
+    """开 / 关一条 server。关掉=断开+工具消失+不占 token。"""
+    b = await req.json()
+    name = (b.get("name") or "")[:24]
+    if not _mcp.set_enabled(name, bool(b.get("on"))):
+        return JSONResponse({"ok": False, "error": "没这条"}, status_code=404)
+    await _mcp.start_all()
+    st = next((x for x in _mcp.status() if x["name"] == name), None)
+    return {"ok": True, "server": st}
 
 
 @app.post("/api/mcp/del")
